@@ -2,7 +2,6 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { getSession } from "@/lib/auth/session";
 
 /**
  * Submits a link request for the calling parent using the code.
