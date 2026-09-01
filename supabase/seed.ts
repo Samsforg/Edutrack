@@ -111,6 +111,11 @@ async function main() {
     "demo-parent3!",
     "Khadija Fall"
   );
+  const superAdminId = await upsertUser(
+    "superadmin@demo.edutrack",
+    "demo-superadmin1!",
+    "Directeur Plateforme"
+  );
 
   // 3. Memberships
   const memberships: { user_id: string; school_id: string; role: string }[] = [
@@ -120,6 +125,7 @@ async function main() {
     { user_id: parent1Id, school_id: schoolId, role: "PARENT" },
     { user_id: parent2Id, school_id: schoolId, role: "PARENT" },
     { user_id: parent3Id, school_id: schoolId, role: "PARENT" },
+    { user_id: superAdminId, school_id: schoolId, role: "SUPER_ADMIN" },
   ];
   for (const m of memberships) {
     await supabase.from("school_members").upsert(m, {

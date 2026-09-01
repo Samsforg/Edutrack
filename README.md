@@ -99,6 +99,7 @@ annonces.
 | Parent 1      | parent1@demo.edutrack | `demo-parent1!` |
 | Parent 2      | parent2@demo.edutrack | `demo-parent2!` |
 | Parent 3      | parent3@demo.edutrack | `demo-parent3!` |
+| Super-admin   | superadmin@demo.edutrack | `demo-superadmin1!` |
 
 > Aucune donnée personnelle réelle n'est utilisée dans le seed.
 
