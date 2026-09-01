@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { logout } from "@/lib/auth/actions";
 import type { Membership } from "@/lib/auth/session";
+import { NotificationBell } from "@/components/live/notification-bell";
 
 export type AppShellProps = {
   user: { id: string; email: string; fullName: string };
@@ -31,6 +32,9 @@ export function AppShell({ user, homePath, children }: AppShellProps) {
             </span>
             <span className="font-bold">EduTrack</span>
           </Link>
+
+          <div className="flex items-center gap-1">
+          <NotificationBell userId={user.id} />
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -64,6 +68,7 @@ export function AppShell({ user, homePath, children }: AppShellProps) {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+          </div>
         </div>
       </header>
 

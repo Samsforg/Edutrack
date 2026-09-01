@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { AttendanceLive } from "@/components/live/attendance-live";
 
 export default async function ParentDashboardPage() {
   const session = await requireRole(["PARENT"]);
@@ -105,20 +106,10 @@ export default async function ParentDashboardPage() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-                    <div className="rounded-lg border p-3">
-                      <p className="text-xs text-muted-foreground">
-                        Présence récente
-                      </p>
-                      <p className="mt-1 text-lg font-semibold">
-                        {childAttendance.length > 0
-                          ? childAttendance.filter(
-                              (a) => a.status === "present"
-                            ).length +
-                            " / " +
-                            childAttendance.length
-                          : "—"}
-                      </p>
-                    </div>
+                    <AttendanceLive
+                      studentId={child.student_id}
+                      studentName={`${child.student_first_name} ${child.student_last_name}`}
+                    />
                     <div className="rounded-lg border p-3">
                       <p className="text-xs text-muted-foreground">Moyenne</p>
                       <p className="mt-1 text-lg font-semibold">

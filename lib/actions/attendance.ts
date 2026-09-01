@@ -5,6 +5,10 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { getSession } from "@/lib/auth/session";
 import { ATTENDANCE_STATUSES } from "@/types/enums";
+import {
+  getParentUserIdsForStudents,
+  insertNotifications,
+} from "@/lib/db/notify";
 
 const attendanceSchema = z.object({
   classId: z.string().uuid(),
@@ -96,6 +100,26 @@ export async function saveAttendance(
 
   if (error) {
     return { error: error.message };
+  }
+
+  // Notify linked parents about non-present students.
+  const flagged = rows.filter((r) => r.status !== "present");
+  if (flagged.length > 0) {
+    const parentIds = await getParentUserIdsForStudents(
+      flagged.map((r) => r.student_id)
+    );
+    const statusLabel =
+      flagged[0]?.status === "absent"
+        ? "Absence"
+        : flagged[0]?.status === "late"
+          ? "Retard"
+          : "Absence excusée";
+    await insertNotifications(parentIds, {
+      type: "attendance",
+      title: statusLabel,
+      body: `Signature de présence enregistrée (${statusLabel.toLowerCase()}).`,
+      link: "/app/parent",
+    });
   }
 
   revalidatePath("/app/parent");

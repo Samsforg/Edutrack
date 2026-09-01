@@ -4,6 +4,11 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { getSession } from "@/lib/auth/session";
+import {
+  getParentUserIdsForSchool,
+  getParentUserIdsForClass,
+  insertNotifications,
+} from "@/lib/db/notify";
 
 const announcementSchema = z.object({
   schoolId: z.string().uuid(),
@@ -46,6 +51,18 @@ export async function createAnnouncement(
   });
 
   if (error) return { error: error.message };
+
+  // Notify linked parents, school-wide or class-wide.
+  const parentIds =
+    d.audience === "class" && d.classroomId
+      ? await getParentUserIdsForClass(d.classroomId)
+      : await getParentUserIdsForSchool(d.schoolId);
+  await insertNotifications(parentIds, {
+    type: "announcement",
+    title: d.title,
+    body: d.important ? "Annonce importante de votre établissement." : undefined,
+    link: "/app/parent",
+  });
 
   revalidatePath("/app/admin/announcements");
   revalidatePath("/app/parent");
