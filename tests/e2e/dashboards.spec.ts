@@ -4,8 +4,8 @@ import { loginAs } from "./helpers";
 test.describe("Dashboards", () => {
   test("admin sees school stats", async ({ page }) => {
     await loginAs(page, "admin");
-    await expect(page.getByText("Élèves")).toBeVisible();
-    await expect(page.getByText("Enseignants")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Administration" })).toBeVisible();
+    await expect(page.getByText("Enseignants").first()).toBeVisible();
   });
 
   test("admin can open the students page", async ({ page }) => {
@@ -14,11 +14,14 @@ test.describe("Dashboards", () => {
     await expect(page.getByRole("heading", { name: /Élèves/ })).toBeVisible();
   });
 
-  test("teacher sees the attendance page with a class to fill", async ({ page }) => {
+  test("teacher sees their classes and can open attendance", async ({ page }) => {
     await loginAs(page, "teacher");
     await page.goto("/app/teacher/attendance");
-    await expect(page.getByRole("heading", { name: /Présences/ })).toBeVisible();
-    await expect(page.getByRole("button", { name: /Enregistrer/ })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /Faire l'appel/ })).toBeVisible();
+    const firstClass = page.locator("a[href*='classId=']").first();
+    await firstClass.click();
+    await expect(page.getByRole("heading", { name: "Appel du jour" })).toBeVisible();
+    await expect(page.getByRole("button", { name: /Valider l'appel/ })).toBeVisible();
   });
 
   test("parent sees at least one linked child", async ({ page }) => {

@@ -1,7 +1,5 @@
 import { defineConfig, devices } from "@playwright/test";
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
-
 export default defineConfig({
   testDir: "./tests/e2e",
   fullyParallel: true,
@@ -12,7 +10,7 @@ export default defineConfig({
     ? [["list"], ["html", { open: "never" }]]
     : "list",
   use: {
-    baseURL: APP_URL,
+    baseURL: "http://localhost:3100",
     trace: "on-first-retry",
     screenshot: "only-on-failure",
   },
@@ -23,9 +21,9 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: "npm run dev",
-    url: `${APP_URL}/login`,
-    reuseExistingServer: !process.env.CI,
+    command: "npm run dev -- -p 3100",
+    url: "http://localhost:3100/login",
+    reuseExistingServer: false,
     timeout: 120_000,
   },
 });

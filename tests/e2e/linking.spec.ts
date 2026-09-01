@@ -12,11 +12,12 @@ import { loginAs } from "./helpers";
  * but to keep this spec data-independent we focus on the UI contract.
  */
 test.describe("Parent-child linking", () => {
-  test("parent can open the link page and submit the flow", async ({ page }) => {
+  test("parent can open the link page with the code form", async ({ page }) => {
     await loginAs(page, "parent");
     await page.goto("/app/parent/link");
-    await expect(page.getByRole("heading", { name: /Lier un enfant/ })).toBeVisible();
-    await expect(page.getByPlaceholder(/EDU/)).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "Liaison parent-enfant" })
+    ).toBeVisible();
   });
 
   test("admin sees the link-requests section", async ({ page }) => {

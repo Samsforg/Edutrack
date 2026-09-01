@@ -12,11 +12,20 @@ test.describe("Authentication", () => {
     await page.getByLabel(/Email/).fill("admin@demo.edutrack");
     await page.getByLabel(/Mot de passe/).fill("wrong-password");
     await page.getByRole("button", { name: /Se connecter/ }).click();
-    await expect(page.getByText(/identifiants|invalides|erreur/i).first()).toBeVisible();
+    await expect(page.getByText(/incorrect|invalides/i).first()).toBeVisible();
   });
 
-  test("landing page redirects to login when logged out", async ({ page }) => {
+  test("protected pages redirect to login when logged out", async ({ page }) => {
+    await page.goto("/app/admin");
+    await expect(page).toHaveURL(/\/login/);
+  });
+
+  test("landing page is public and links to login", async ({ page }) => {
     await page.goto("/");
+    await expect(
+      page.getByRole("heading", { name: /Le lien intelligent/ })
+    ).toBeVisible();
+    await page.getByRole("link", { name: "Se connecter" }).first().click();
     await expect(page).toHaveURL(/\/login/);
   });
 });
