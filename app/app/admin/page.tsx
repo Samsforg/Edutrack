@@ -38,6 +38,7 @@ export default async function AdminDashboardPage() {
     { href: "/app/admin/announcements", label: "Annonces" },
     { href: "/app/admin/link-requests", label: "Codes & demandes" },
     { href: "/app/admin/import", label: "Import CSV" },
+    { href: "/app/admin/analytics", label: "Analyse" },
   ];
 
   return (
