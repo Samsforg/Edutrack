@@ -281,7 +281,10 @@ async function main() {
         .eq("school_id", schoolId)
         .eq("matricule", matricule)
         .maybeSingle();
-      if (data) continue;
+      if (data) {
+        (studentIdByClass[name] ??= []).push(data.id);
+        continue;
+      }
       const { data: student, error } = await supabase
         .from("students")
         .insert({
@@ -329,8 +332,15 @@ async function main() {
     parentIdMap.set(p.user_id, row.id);
   }
 
-  // Link parent1 -> first students of each class; parent2 -> 3ème A students; parent3 -> 5ème A
-  const parentUserIds = Object.keys(parentIdMap);
+  // Liens déterministes : parent1 -> 1er élève de chaque classe ;
+  // parent2 -> tous les élèves de 3ème A ; parent3 -> 3 élèves de 5ème A.
+  // On efface d'abord les liaisons existantes de ces parents pour rester
+  // déterministe (ré-exécutions répétées sans doublons).
+  const parentRowIds = [...parentIdMap.values()];
+  if (parentRowIds.length) {
+    await supabase.from("student_parents").delete().in("parent_id", parentRowIds);
+  }
+  const parentUserIds = [...parentIdMap.keys()];
   const allStudents: string[] = Object.values(studentIdByClass).flat();
   const links = new Set<string>();
   if (allStudents.length > 0) {
@@ -347,10 +357,11 @@ async function main() {
   }
   for (const link of links) {
     const [pid, sid] = link.split(":");
-    await supabase.from("student_parents").upsert(
+    const { error: linkErr } = await supabase.from("student_parents").upsert(
       { student_id: sid, parent_id: pid },
       { onConflict: "student_id,parent_id" }
     );
+    if (linkErr) throw new Error(`Liaison parent-élève impossible (${pid}:${sid}): ${linkErr.message}`);
   }
   console.log("  Liaisons parents créées:", links.size);
 
@@ -433,6 +444,7 @@ async function main() {
       audience: "all",
       title: "Réunion parents",
       body: "Réunion des parents le 15 octobre à 17h00.",
+      important: false,
     },
   ]);
   if (annError) {

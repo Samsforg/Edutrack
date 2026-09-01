@@ -27,7 +27,7 @@ comment on function public.resolve_link_code(uuid, text) is
 
 -- Creates a link request for the calling parent. Security definer so the
 -- caller never needs SELECT on other students.
-create or replace function public.create_link_request(target_school uuid, code text)
+create or replace function public.create_link_request(target_school uuid, p_code text)
 returns table (request_id uuid)
 language plpgsql
 security definer
@@ -42,7 +42,7 @@ begin
   select s.id, s.school_id into v_student, v_school
   from public.students s
   where s.school_id = target_school
-    and upper(s.link_code) = upper(btrim(code));
+    and upper(s.link_code) = upper(btrim(p_code));
 
   if v_student is null then
     raise exception 'CODE_NOT_FOUND';
@@ -62,7 +62,7 @@ begin
       and r.status = 'pending'
       and (
         (v_parent is not null and r.parent_id = v_parent)
-        or (v_parent is null and r.code = upper(btrim(code)))
+        or (v_parent is null and upper(btrim(r.code)) = upper(btrim(p_code)))
       )
   ) then
     raise exception 'PENDING_EXISTS';
@@ -71,7 +71,7 @@ begin
   insert into public.student_link_requests (
     school_id, parent_id, student_id, code, status, expires_at
   ) values (
-    v_school, v_parent, v_student, upper(btrim(code)), 'pending',
+    v_school, v_parent, v_student, upper(btrim(p_code)), 'pending',
     now() + interval '7 days'
   )
   returning id into v_student;
@@ -83,7 +83,8 @@ $$;
 comment on function public.create_link_request(uuid, text) is
   'Creates a pending parent-child link request from a link code.';
 
--- Sets a request status (used by parents to cancel their own request).
+-- Sets a request status. Only the owning parent may update their own
+-- pending request (used to cancel it). Admins act through RLS directly.
 create or replace function public.set_link_request_status(request_id uuid, new_status public.link_request_status)
 returns void
 language plpgsql
@@ -93,8 +94,6 @@ as $$
 declare
   v_parent uuid;
 begin
-  -- Only the owning parent may update their own pending request
-  -- to 'rejected' (cancellation). Admins are handled via RLS directly.
   select r.parent_id into v_parent
   from public.student_link_requests r
   where r.id = request_id;
@@ -110,5 +109,9 @@ begin
   if v_parent is null then
     raise exception 'NOT_ALLOWED';
   end if;
+
+  update public.student_link_requests
+  set status = new_status
+  where id = request_id;
 end;
 $$;

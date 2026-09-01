@@ -14,7 +14,7 @@ export async function submitLinkRequest(schoolId: string, code: string) {
 
   const { error } = await supabase.rpc("create_link_request", {
     target_school: schoolId,
-    code: normalized,
+    p_code: normalized,
   });
 
   if (error) {

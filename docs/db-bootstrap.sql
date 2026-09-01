@@ -32,97 +32,10 @@ end;
 $$;
 
 -- ============================================================
--- Multi-tenancy helper functions (used by RLS)
+-- Multi-tenancy helper functions live in 0002_helpers.sql
+-- (they reference tables created in 0001_tables.sql, and
+-- PostgreSQL validates SQL functions at creation time).
 -- ============================================================
-
--- Returns true when the given user is an active member of the given school.
-create or replace function public.is_school_member(target_user uuid, target_school uuid)
-returns boolean
-language sql
-stable
-security definer
-set search_path = public
-as $$
-  select exists (
-    select 1
-    from public.school_members sm
-    where sm.user_id = target_user
-      and sm.school_id = target_school
-  );
-$$;
-
--- Returns true when the given user holds a specific role in the given school.
-create or replace function public.user_has_role(target_school uuid, required_role public.user_role)
-returns boolean
-language sql
-stable
-security definer
-set search_path = public
-as $$
-  select exists (
-    select 1
-    from public.school_members sm
-    where sm.user_id = auth.uid()
-      and sm.school_id = target_school
-      and sm.role = required_role
-  );
-$$;
-
--- Returns true when the current user is a SUPER_ADMIN (platform).
-create or replace function public.is_super_admin()
-returns boolean
-language sql
-stable
-security definer
-set search_path = public
-as $$
-  select exists (
-    select 1
-    from public.school_members sm
-    where sm.user_id = auth.uid()
-      and sm.role = 'SUPER_ADMIN'
-  );
-$$;
-
--- Returns true when the given student belongs to the given school.
-create or replace function public.student_in_school(target_student uuid, target_school uuid)
-returns boolean
-language sql
-stable
-security definer
-set search_path = public
-as $$
-  select exists (
-    select 1 from public.students s
-    where s.id = target_student and s.school_id = target_school
-  );
-$$;
-
--- Returns true when the current user (parent) is linked to the given student.
-create or replace function public.parent_of_student(target_student uuid)
-returns boolean
-language sql
-stable
-security definer
-set search_path = public
-as $$
-  select exists (
-    select 1
-    from public.parents p
-    join public.student_parents sp on sp.parent_id = p.id
-    where p.school_id in (
-      select school_id from public.school_members where user_id = auth.uid() and role = 'PARENT'
-    )
-      and sp.student_id = target_student
-  )
-     or exists (
-    select 1
-    from public.parents p
-    join public.student_parents sp on sp.parent_id = p.id
-    where p.user_id = auth.uid()
-      and sp.student_id = target_student
-  );
-$$;
 
 -- ============================================================
 -- profiles (extends auth.users)
@@ -423,13 +336,94 @@ create trigger announcements_updated_at before update on public.announcements
 create trigger link_requests_updated_at before update on public.student_link_requests
   for each row execute procedure public.set_updated_at();
 -- ============================================================
--- EduTrack :: 0003_rls.sql
--- Row Level Security policies.
--- Core rule: a user can only ever access data of schools they
--- belong to. Parents only access their own children's data.
+-- EduTrack :: 0002_helpers.sql
+-- Multi-tenancy + authorization helper functions used by RLS.
+-- MUST run after 0001_tables.sql: PostgreSQL validates SQL
+-- functions at creation time, so they cannot reference tables
+-- that do not exist yet.
 -- ============================================================
 
--- Additional helpers used by policies ------------------------
+-- Returns true when the given user is an active member of the given school.
+create or replace function public.is_school_member(target_user uuid, target_school uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from public.school_members sm
+    where sm.user_id = target_user
+      and sm.school_id = target_school
+  );
+$$;
+
+-- Returns true when the given user holds a specific role in the given school.
+create or replace function public.user_has_role(target_school uuid, required_role public.user_role)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from public.school_members sm
+    where sm.user_id = auth.uid()
+      and sm.school_id = target_school
+      and sm.role = required_role
+  );
+$$;
+
+-- Returns true when the current user is a SUPER_ADMIN (platform).
+create or replace function public.is_super_admin()
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from public.school_members sm
+    where sm.user_id = auth.uid()
+      and sm.role = 'SUPER_ADMIN'
+  );
+$$;
+
+-- Returns true when the given student belongs to the given school.
+create or replace function public.student_in_school(target_student uuid, target_school uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1 from public.students s
+    where s.id = target_student and s.school_id = target_school
+  );
+$$;
+
+-- Returns true when the current user (parent) is linked to the given student.
+-- The parent row is bound to auth.uid(): a parent can only resolve a
+-- student through their OWN parents row (never everyone's children).
+create or replace function public.parent_of_student(target_student uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from public.parents p
+    join public.student_parents sp on sp.parent_id = p.id
+    where sp.student_id = target_student
+      and p.user_id = auth.uid()
+  );
+$$;
 
 -- True when the current authenticated user teaches the given class.
 create or replace function public.user_teaches_class(target_class uuid)
@@ -460,7 +454,13 @@ security definer
 set search_path = public
 as $$
   select public.user_has_role(target_school, 'SCHOOL_ADMIN');
-$$;
+$$;-- ============================================================
+-- EduTrack :: 0003_rls.sql
+-- Row Level Security policies.
+-- Core rule: a user can only ever access data of schools they
+-- belong to. Parents only access their own children's data.
+-- Authorization helpers are defined in 0002_helpers.sql.
+-- ============================================================
 
 -- ============================================================
 -- Enable RLS everywhere
@@ -864,7 +864,7 @@ comment on function public.resolve_link_code(uuid, text) is
 
 -- Creates a link request for the calling parent. Security definer so the
 -- caller never needs SELECT on other students.
-create or replace function public.create_link_request(target_school uuid, code text)
+create or replace function public.create_link_request(target_school uuid, p_code text)
 returns table (request_id uuid)
 language plpgsql
 security definer
@@ -879,7 +879,7 @@ begin
   select s.id, s.school_id into v_student, v_school
   from public.students s
   where s.school_id = target_school
-    and upper(s.link_code) = upper(btrim(code));
+    and upper(s.link_code) = upper(btrim(p_code));
 
   if v_student is null then
     raise exception 'CODE_NOT_FOUND';
@@ -899,7 +899,7 @@ begin
       and r.status = 'pending'
       and (
         (v_parent is not null and r.parent_id = v_parent)
-        or (v_parent is null and r.code = upper(btrim(code)))
+        or (v_parent is null and upper(btrim(r.code)) = upper(btrim(p_code)))
       )
   ) then
     raise exception 'PENDING_EXISTS';
@@ -908,7 +908,7 @@ begin
   insert into public.student_link_requests (
     school_id, parent_id, student_id, code, status, expires_at
   ) values (
-    v_school, v_parent, v_student, upper(btrim(code)), 'pending',
+    v_school, v_parent, v_student, upper(btrim(p_code)), 'pending',
     now() + interval '7 days'
   )
   returning id into v_student;
@@ -920,7 +920,8 @@ $$;
 comment on function public.create_link_request(uuid, text) is
   'Creates a pending parent-child link request from a link code.';
 
--- Sets a request status (used by parents to cancel their own request).
+-- Sets a request status. Only the owning parent may update their own
+-- pending request (used to cancel it). Admins act through RLS directly.
 create or replace function public.set_link_request_status(request_id uuid, new_status public.link_request_status)
 returns void
 language plpgsql
@@ -930,8 +931,6 @@ as $$
 declare
   v_parent uuid;
 begin
-  -- Only the owning parent may update their own pending request
-  -- to 'rejected' (cancellation). Admins are handled via RLS directly.
   select r.parent_id into v_parent
   from public.student_link_requests r
   where r.id = request_id;
@@ -947,8 +946,171 @@ begin
   if v_parent is null then
     raise exception 'NOT_ALLOWED';
   end if;
+
+  update public.student_link_requests
+  set status = new_status
+  where id = request_id;
 end;
+$$;-- ============================================================
+-- EduTrack :: 0005_rls_harden.sql
+-- Parents are school members (for announcements, notifications,
+-- comments) but must ONLY read their own children's data.
+-- The previous read policies allowed ANY school member — including
+-- parents — to see all students, attendance, grades and links.
+-- This migration restricts those reads to non-parent members.
+-- ============================================================
+
+-- True when the given user belongs to the school with a role other
+-- than PARENT. Parents get data exclusively through parent_of_student.
+create or replace function public.is_school_non_parent_member(target_user uuid, target_school uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from public.school_members sm
+    where sm.user_id = target_user
+      and sm.school_id = target_school
+      and sm.role <> 'PARENT'
+  );
 $$;
+
+-- ============================================================
+-- students
+-- ============================================================
+drop policy if exists "students_select_member_or_linked_parent" on public.students;
+create policy "students_select_member_or_linked_parent" on public.students
+  for select to authenticated
+  using (
+    public.is_super_admin()
+    or public.parent_of_student(id)
+    or public.is_school_non_parent_member(auth.uid(), school_id)
+  );
+
+-- ============================================================
+-- attendance
+-- ============================================================
+drop policy if exists "attendance_select" on public.attendance;
+create policy "attendance_select" on public.attendance
+  for select to authenticated
+  using (
+    public.is_super_admin()
+    or public.parent_of_student(student_id)
+    or public.is_school_non_parent_member(auth.uid(), school_id)
+  );
+
+-- ============================================================
+-- grades
+-- ============================================================
+drop policy if exists "grades_select" on public.grades;
+create policy "grades_select" on public.grades
+  for select to authenticated
+  using (
+    public.is_super_admin()
+    or public.parent_of_student(student_id)
+    or public.is_school_non_parent_member(auth.uid(), school_id)
+  );
+
+-- ============================================================
+-- student_parents
+-- ============================================================
+drop policy if exists "student_parents_select" on public.student_parents;
+create policy "student_parents_select" on public.student_parents
+  for select to authenticated
+  using (
+    public.is_super_admin()
+    or public.parent_of_student(student_id)
+    or exists (
+      select 1 from public.students s
+      where s.id = student_parents.student_id
+        and public.is_school_non_parent_member(auth.uid(), s.school_id)
+    )
+  );
+
+-- A teacher/adult member must still be able to see classmates list
+-- via classes, but parents should NOT be able to enumerate class
+-- rosters through students. Covered above by role exclusion.-- ============================================================
+-- EduTrack :: 0006_fix_parent_of_student.sql
+-- parent_of_student() scoped the school only, leaking every
+-- student that has ANY parent in the caller's school. The parent
+-- row is now bound to auth.uid() (security first): a parent can
+-- only ever resolve a student through their OWN parents row.
+-- Also hardens the parents read policy (no cross-parent leak).
+-- ============================================================
+
+create or replace function public.parent_of_student(target_student uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from public.parents p
+    join public.student_parents sp on sp.parent_id = p.id
+    where sp.student_id = target_student
+      and p.user_id = auth.uid()
+  );
+$$;
+
+-- ============================================================
+-- parents
+-- ============================================================
+drop policy if exists "parents_select_member" on public.parents;
+create policy "parents_select_member" on public.parents
+  for select to authenticated
+  using (
+    public.is_super_admin()
+    or public.is_school_non_parent_member(auth.uid(), school_id)
+    or user_id = auth.uid()
+  );-- ============================================================
+-- EduTrack :: 0007_fix_notifications_rls.sql
+-- notifications_own enforced user_id = auth.uid() for ALL commands,
+-- so staff (admin/teacher) could NEVER deliver notifications to
+-- parents. Using a SECURITY DEFINER helper avoids infinite
+-- recursion (reading school_members inside a policy triggered
+-- staff policies referencing school_members again).
+-- ============================================================
+
+-- True when the current user is a non-PARENT member of the school
+-- of the given target parent account. SECURITY DEFINER so it reads
+-- school_members/parents without re-evaluating their RLS policies.
+create or replace function public.staff_can_notify_parent(target_user uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public, pg_temp
+as $$
+  select exists (
+    select 1
+    from public.parents p
+    where p.user_id = target_user
+      and exists (
+        select 1
+        from public.school_members sm
+        where sm.user_id = auth.uid()
+          and sm.school_id = p.school_id
+          and sm.role <> 'PARENT'
+      )
+  );
+$$;
+
+drop policy if exists "notifications_staff_insert" on public.notifications;
+create policy "notifications_staff_insert" on public.notifications
+  for insert to authenticated
+  with check (public.staff_can_notify_parent(user_id));
+
+-- keep owner-only for select/update/delete
+drop policy if exists "notifications_own" on public.notifications;
+create policy "notifications_own" on public.notifications
+  for all to authenticated
+  using (user_id = auth.uid())
+  with check (user_id = auth.uid());
 -- ============================================================
 -- Version bookkeeping (Supabase CLI compatibility)
 -- ============================================================
@@ -961,6 +1123,10 @@ create table if not exists supabase_migrations.schema_migrations (
 insert into supabase_migrations.schema_migrations (version, name) values
   ('20250401000000', 'init'),
   ('20250401000001', 'tables'),
-  ('20250401000002', 'rls'),
-  ('20250401000003', 'functions')
+  ('20250401000002', 'helpers'),
+  ('20250401000003', 'rls'),
+  ('20250401000004', 'functions'),
+  ('20250401000005', 'rls_harden'),
+  ('20250401000006', 'fix_parent_of_student'),
+  ('20250401000007', 'fix_notifications_rls')
 on conflict (version) do nothing;
