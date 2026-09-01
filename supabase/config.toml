@@ -1,0 +1,28 @@
+# Supabase configuration for EduTrack.
+# See https://supabase.com/docs/guides/local-development for more details.
+project_id = "edutrack"
+
+# Auth settings
+[auth]
+enabled = true
+site_url = "http://localhost:3000"
+additional_redirect_urls = ["http://localhost:3000/auth/callback"]
+jwt_expiry = 3600
+enable_signup = true
+
+[auth.email]
+enable_signup = true
+enable_confirmations = true
+double_confirm_changes = true
+enable_autoconfirm = false
+
+# Realtime
+[realtime]
+enabled = true
+
+# Storage
+[storage]
+enabled = true
+
+[analytics]
+enabled = false
