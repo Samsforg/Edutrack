@@ -1,26 +1,14 @@
 import Link from "next/link";
 import { requireRole } from "@/lib/auth/guard";
 import { getParentChildren } from "@/lib/db/parent";
-import { getLinkedRequests } from "@/lib/actions/linking";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { LinkRequestForm } from "./link-request-form";
 
 export default async function LinkPage() {
   const session = await requireRole(["PARENT"]);
-  const schoolId =
-    session.memberships.find((m) => m.role === "PARENT")?.school_id ?? null;
-  const [children, requests] = await Promise.all([
-    getParentChildren(session.user.id),
-    getLinkedRequests(),
-  ]);
+  const children = await getParentChildren(session.user.id);
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
@@ -32,18 +20,7 @@ export default async function LinkPage() {
         </p>
       </div>
 
-      {schoolId ? (
-        <LinkRequestForm schoolId={schoolId} />
-      ) : (
-        <Card>
-          <CardContent className="p-6">
-            <p className="text-sm text-muted-foreground">
-              Aucun établissement associé à votre compte. Contactez votre
-              école.
-            </p>
-          </CardContent>
-        </Card>
-      )}
+      <LinkRequestForm />
 
       <Card>
         <CardHeader>
@@ -70,37 +47,6 @@ export default async function LinkPage() {
                   </p>
                 </div>
                 <Badge variant="outline">Lié</Badge>
-              </div>
-            ))
-          )}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Demandes de liaison</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          {requests.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              Aucune demande récente.
-            </p>
-          ) : (
-            requests.map((r) => (
-              <div
-                key={r.id}
-                className="flex items-center justify-between rounded-lg border p-3"
-              >
-                <div>
-                  <p className="font-medium">{r.code}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {r.students
-                      ? `${r.students.first_name} ${r.students.last_name}`
-                      : "Enfant à confirmer"}{" "}
-                    — {new Date(r.created_at).toLocaleDateString("fr-FR")}
-                  </p>
-                </div>
-                <Badge variant="secondary">{r.status}</Badge>
               </div>
             ))
           )}

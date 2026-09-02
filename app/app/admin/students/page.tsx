@@ -5,7 +5,6 @@ import {
   Card,
   CardContent,
 } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -77,7 +76,7 @@ export default async function StudentsPage({
         <Input
           name="q"
           defaultValue={q ?? ""}
-          placeholder="Rechercher (nom, matricule, code)…"
+          placeholder="Rechercher (nom, matricule)…"
           className="max-w-xs"
         />
         <select
@@ -135,7 +134,6 @@ export default async function StudentsPage({
                   <TableHead>Matricule</TableHead>
                   <TableHead>Classe</TableHead>
                   <TableHead>Statut</TableHead>
-                  <TableHead>Code</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -153,17 +151,20 @@ export default async function StudentsPage({
                         schoolId={schoolId}
                       />
                     </TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className="font-mono">
-                        {s.link_code ?? "—"}
-                      </Badge>
-                    </TableCell>
                     <TableCell className="text-right">
-                      <StudentDeleteButton
-                        studentId={s.id}
-                        schoolId={schoolId}
-                        name={`${s.last_name} ${s.first_name}`}
-                      />
+                      <div className="flex items-center justify-end gap-2">
+                        <Link
+                          href={`/app/admin/students/${s.id}`}
+                          className="text-sm text-primary hover:underline"
+                        >
+                          Détails
+                        </Link>
+                        <StudentDeleteButton
+                          studentId={s.id}
+                          schoolId={schoolId}
+                          name={`${s.last_name} ${s.first_name}`}
+                        />
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}

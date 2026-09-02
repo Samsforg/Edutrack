@@ -121,7 +121,7 @@ export function StudentFormButton({
         toast.error(result.error);
         return;
       }
-      toast.success("Élève créé avec un code de liaison");
+      toast.success("Élève créé");
       setForm({
         matricule: "",
         firstName: "",
@@ -144,7 +144,8 @@ export function StudentFormButton({
         <DialogHeader>
           <DialogTitle>Nouvel élève</DialogTitle>
           <DialogDescription>
-            Un code de liaison sera généré automatiquement.
+            Créez un élève, puis générez un code de liaison sécurisé depuis
+            sa fiche.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={submit} className="space-y-4">

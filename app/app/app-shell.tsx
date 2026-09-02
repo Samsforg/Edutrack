@@ -35,9 +35,19 @@ const adminNav = [
   { href: "/app/admin/settings", label: "Paramètres" },
 ];
 
+const parentNav = [
+  { href: "/app/parent", label: "Tableau de bord" },
+  { href: "/app/parent/children", label: "Mes enfants" },
+  { href: "/app/parent/link", label: "Lier un enfant" },
+  { href: "/app/parent/link-requests", label: "Mes demandes" },
+];
+
 export function AppShell({ user, memberships, homePath, children }: AppShellProps) {
   const pathname = usePathname();
   const isAdmin = memberships.some((m) => m.role === "SCHOOL_ADMIN");
+  const isParent = memberships.some(
+    (m) => m.role === "PARENT" && pathname.startsWith("/app/parent")
+  );
 
   return (
     <div className="flex min-h-full flex-col">
@@ -95,6 +105,31 @@ export function AppShell({ user, memberships, homePath, children }: AppShellProp
                 const active =
                   item.href === "/app/admin"
                     ? pathname === "/app/admin"
+                    : pathname.startsWith(item.href);
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={`whitespace-nowrap rounded-md px-3 py-1.5 text-sm transition-colors ${
+                      active
+                        ? "bg-primary text-primary-foreground"
+                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                    }`}
+                  >
+                    {item.label}
+                  </Link>
+                );
+              })}
+            </div>
+          </nav>
+        ) : null}
+        {isParent ? (
+          <nav className="border-t">
+            <div className="mx-auto flex w-full max-w-6xl items-center gap-1 overflow-x-auto px-4 py-1">
+              {parentNav.map((item) => {
+                const active =
+                  item.href === "/app/parent"
+                    ? pathname === "/app/parent"
                     : pathname.startsWith(item.href);
                 return (
                   <Link
