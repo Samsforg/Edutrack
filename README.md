@@ -2,6 +2,12 @@
 
 > Le lien intelligent entre l'école et la famille.
 
+[![CI](https://github.com/Samsforg/Edutrack/actions/workflows/ci.yml/badge.svg)](https://github.com/Samsforg/Edutrack/actions/workflows/ci.yml)
+![Next.js](https://img.shields.io/badge/Next.js-000000?logo=next.js&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white)
+![Supabase](https://img.shields.io/badge/Supabase-3ECF8E?logo=supabase&logoColor=white)
+![Playwright](https://img.shields.io/badge/Playwright-2EAD33?logo=playwright&logoColor=white)
+
 EduTrack est un SaaS EdTech B2B2C qui permet aux établissements scolaires de
 communiquer avec les parents et de leur fournir un suivi quasi temps réel de la
 scolarité de leurs enfants : présences, absences, retards, notes, annonces et
@@ -9,6 +15,15 @@ notifications.
 
 EduTrack est un projet **totalement indépendant** et ne partage ni code, ni
 base de données, ni utilisateurs, ni dépendance technique avec Edukora.
+
+## Fonctionnalités
+
+- **Espace parent** : enfants liés, présences en direct, moyennes, notifications Realtime.
+- **Espace enseignant** : prise d'appel par classe, saisie des notes.
+- **Espace admin école** : gestion élèves/enseignants/classes, annonces, approbation des liaisons parent-enfant, import CSV, analytique.
+- **Espace super-admin** : vue plateforme, création d'établissements.
+- **Liaison parent-enfant par code** : l'école affiche un code, le parent le saisit, l'admin approuve.
+- **Sécurité multi-tenant** : Row Level Security (PostgreSQL), isolation stricte des données par école et par rôle.
 
 ## Stack
 
