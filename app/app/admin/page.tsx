@@ -3,6 +3,7 @@ import { requireRole } from "@/lib/auth/guard";
 import { getAdminStats } from "@/lib/db/admin";
 import { getSchoolTodayAttendance } from "@/lib/db/attendance-history";
 import { getSchoolAverages } from "@/lib/db/academic";
+import { requireActiveSubscription } from "@/lib/billing/access";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -12,6 +13,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { SetupChecklist } from "./components/setup-checklist";
+import { SubscriptionBanner } from "./components/subscription-banner";
 
 export default async function AdminDashboardPage() {
   const session = await requireRole(["SCHOOL_ADMIN"]);
@@ -32,6 +35,7 @@ export default async function AdminDashboardPage() {
     );
   }
 
+  await requireActiveSubscription(schoolId);
   const stats = await getAdminStats(schoolId);
   const today = new Date().toISOString().slice(0, 10);
   const todayRows = await getSchoolTodayAttendance(schoolId, today);
@@ -64,12 +68,29 @@ export default async function AdminDashboardPage() {
         </div>
       </div>
 
+      <SubscriptionBanner schoolId={schoolId} />
+
+      <div className="grid gap-6 lg:grid-cols-3">
+        <div className="lg:col-span-2 grid grid-cols-2 gap-4 sm:grid-cols-2">
+          {[
+            { label: "Élèves", value: stats.students },
+            { label: "Élèves actifs", value: stats.activeStudents },
+            { label: "Enseignants", value: stats.teachers },
+            { label: "Enseignants actifs", value: stats.activeTeachers },
+          ].map((s) => (
+            <Card key={s.label}>
+              <CardContent className="p-4">
+                <p className="text-xs text-muted-foreground">{s.label}</p>
+                <p className="mt-1 truncate text-2xl font-bold">{s.value}</p>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+        <SetupChecklist schoolId={schoolId} />
+      </div>
+
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         {[
-          { label: "Élèves", value: stats.students },
-          { label: "Élèves actifs", value: stats.activeStudents },
-          { label: "Enseignants", value: stats.teachers },
-          { label: "Enseignants actifs", value: stats.activeTeachers },
           { label: "Parents", value: stats.parents },
           { label: "Classes", value: stats.classes },
           { label: "Matières", value: stats.subjects },

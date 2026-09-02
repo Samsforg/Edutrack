@@ -19,6 +19,15 @@ export type NotificationType =
   | "system";
 export type LinkRequestStatus = "pending" | "approved" | "rejected" | "expired";
 export type AnnouncementAudience = "all" | "class";
+export type SubscriptionStatus =
+  | "trialing"
+  | "active"
+  | "past_due"
+  | "canceled"
+  | "expired"
+  | "suspended";
+export type BillingProvider = "manual" | "stripe" | "paystack" | "flutterwave";
+export type LeadStatus = "new" | "contacted" | "demo" | "trial" | "converted" | "lost";
 
 export interface Database {
   public: {
@@ -676,6 +685,270 @@ export interface Database {
           attempted_at?: string;
         };
       };
+      import_jobs: {
+        Row: {
+          id: string;
+          school_id: string;
+          user_id: string;
+          type: "students" | "parents" | "teachers" | "classes" | "subjects";
+          status: "pending" | "processing" | "completed" | "failed" | "cancelled";
+          total_rows: number;
+          success_rows: number;
+          error_rows: number;
+          file_name: string | null;
+          errors: Json | null;
+          created_at: string;
+          completed_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          school_id: string;
+          user_id: string;
+          type: "students" | "parents" | "teachers" | "classes" | "subjects";
+          status?: "pending" | "processing" | "completed" | "failed" | "cancelled";
+          total_rows?: number;
+          success_rows?: number;
+          error_rows?: number;
+          file_name?: string | null;
+          errors?: Json | null;
+          created_at?: string;
+          completed_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          school_id?: string;
+          user_id?: string;
+          type?: "students" | "parents" | "teachers" | "classes" | "subjects";
+          status?: "pending" | "processing" | "completed" | "failed" | "cancelled";
+          total_rows?: number;
+          success_rows?: number;
+          error_rows?: number;
+          file_name?: string | null;
+          errors?: Json | null;
+          created_at?: string;
+          completed_at?: string | null;
+        };
+      };
+      subscription_plans: {
+        Row: {
+          id: string;
+          code: string;
+          name: string;
+          description: string | null;
+          price: number;
+          currency: string;
+          billing_interval: "month" | "year";
+          max_students: number | null;
+          max_teachers: number | null;
+          max_admins: number | null;
+          features: Json;
+          active: boolean;
+          is_default: boolean;
+          sort_order: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          code: string;
+          name: string;
+          description?: string | null;
+          price?: number;
+          currency?: string;
+          billing_interval?: "month" | "year";
+          max_students?: number | null;
+          max_teachers?: number | null;
+          max_admins?: number | null;
+          features?: Json;
+          active?: boolean;
+          is_default?: boolean;
+          sort_order?: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          code?: string;
+          name?: string;
+          description?: string | null;
+          price?: number;
+          currency?: string;
+          billing_interval?: "month" | "year";
+          max_students?: number | null;
+          max_teachers?: number | null;
+          max_admins?: number | null;
+          features?: Json;
+          active?: boolean;
+          is_default?: boolean;
+          sort_order?: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      school_subscriptions: {
+        Row: {
+          id: string;
+          school_id: string;
+          plan_id: string;
+          status: SubscriptionStatus;
+          trial_started_at: string | null;
+          trial_ends_at: string | null;
+          current_period_start: string | null;
+          current_period_end: string | null;
+          provider: BillingProvider;
+          provider_customer_id: string | null;
+          provider_subscription_id: string | null;
+          cancel_at_period_end: boolean;
+          canceled_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          school_id: string;
+          plan_id: string;
+          status?: SubscriptionStatus;
+          trial_started_at?: string | null;
+          trial_ends_at?: string | null;
+          current_period_start?: string | null;
+          current_period_end?: string | null;
+          provider?: BillingProvider;
+          provider_customer_id?: string | null;
+          provider_subscription_id?: string | null;
+          cancel_at_period_end?: boolean;
+          canceled_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          school_id?: string;
+          plan_id?: string;
+          status?: SubscriptionStatus;
+          trial_started_at?: string | null;
+          trial_ends_at?: string | null;
+          current_period_start?: string | null;
+          current_period_end?: string | null;
+          provider?: BillingProvider;
+          provider_customer_id?: string | null;
+          provider_subscription_id?: string | null;
+          cancel_at_period_end?: boolean;
+          canceled_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      billing_events: {
+        Row: {
+          id: string;
+          school_id: string | null;
+          provider: BillingProvider;
+          event_id: string;
+          event_type: string;
+          payload: Json;
+          processed: boolean;
+          processed_at: string | null;
+          error: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          school_id?: string | null;
+          provider: BillingProvider;
+          event_id: string;
+          event_type: string;
+          payload?: Json;
+          processed?: boolean;
+          processed_at?: string | null;
+          error?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          school_id?: string | null;
+          provider?: BillingProvider;
+          event_id?: string;
+          event_type?: string;
+          payload?: Json;
+          processed?: boolean;
+          processed_at?: string | null;
+          error?: string | null;
+          created_at?: string;
+        };
+      };
+      school_leads: {
+        Row: {
+          id: string;
+          name: string;
+          school_name: string | null;
+          email: string | null;
+          phone: string | null;
+          city: string | null;
+          est_students: number | null;
+          message: string | null;
+          status: LeadStatus;
+          source: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          school_name?: string | null;
+          email?: string | null;
+          phone?: string | null;
+          city?: string | null;
+          est_students?: number | null;
+          message?: string | null;
+          status?: LeadStatus;
+          source?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          name?: string;
+          school_name?: string | null;
+          email?: string | null;
+          phone?: string | null;
+          city?: string | null;
+          est_students?: number | null;
+          message?: string | null;
+          status?: LeadStatus;
+          source?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      billing_audit_logs: {
+        Row: {
+          id: string;
+          user_id: string | null;
+          school_id: string | null;
+          action: string;
+          old_value: Json | null;
+          new_value: Json | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id?: string | null;
+          school_id?: string | null;
+          action: string;
+          old_value?: Json | null;
+          new_value?: Json | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string | null;
+          school_id?: string | null;
+          action?: string;
+          old_value?: Json | null;
+          new_value?: Json | null;
+          created_at?: string;
+        };
+      };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;
@@ -687,6 +960,10 @@ export interface Database {
       notification_type: NotificationType;
       link_request_status: LinkRequestStatus;
       announcement_audience: AnnouncementAudience;
+      subscription_status: SubscriptionStatus;
+      subscription_interval: "month" | "year";
+      billing_provider: BillingProvider;
+      lead_status: LeadStatus;
     };
   };
 }

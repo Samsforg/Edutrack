@@ -1,5 +1,6 @@
 import { requireRole } from "@/lib/auth/guard";
 import { getPlatformStats, listSchoolsForSuperAdmin } from "@/lib/db/super-admin";
+import { getSaasMetrics } from "@/lib/db/saas";
 import {
   Card,
   CardContent,
@@ -7,15 +8,18 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
 import { SchoolFormButton } from "./school-form";
 
 export default async function SuperAdminPage() {
   const session = await requireRole(["SUPER_ADMIN"]);
   void session;
 
-  const [stats, schools] = await Promise.all([
+  const [stats, schools, saas] = await Promise.all([
     getPlatformStats(),
     listSchoolsForSuperAdmin(),
+    getSaasMetrics(),
   ]);
 
   const cards = [
@@ -27,6 +31,17 @@ export default async function SuperAdminPage() {
     { label: "Élèves", value: stats.students },
   ];
 
+  const saasCards = [
+    { label: "MRR", value: `${saas.mrr.toLocaleString("fr-FR")} FCFA` },
+    { label: "ARR", value: `${saas.arr.toLocaleString("fr-FR")} FCFA` },
+    { label: "Écoles payantes", value: saas.paidSchools },
+    { label: "Écoles en essai", value: saas.trialSchools },
+    { label: "Conversion essai→payant", value: `${saas.trialConversionRate}%` },
+    { label: "Churn", value: `${saas.churnRate}%` },
+    { label: "ARPA", value: `${saas.arpa.toLocaleString("fr-FR")} FCFA` },
+    { label: "Élèves / école", value: saas.studentsPerSchool },
+  ];
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-4">
@@ -36,7 +51,12 @@ export default async function SuperAdminPage() {
             Vue d&apos;ensemble de tous les établissements.
           </p>
         </div>
-        <SchoolFormButton />
+        <div className="flex gap-2">
+          <Button asChild variant="outline">
+            <Link href="/app/super-admin/leads">Leads</Link>
+          </Button>
+          <SchoolFormButton />
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
@@ -49,6 +69,20 @@ export default async function SuperAdminPage() {
           </Card>
         ))}
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Métriques SaaS</CardTitle>
+        </CardHeader>
+        <CardContent className="grid grid-cols-2 gap-4 md:grid-cols-4">
+          {saasCards.map((c) => (
+            <div key={c.label} className="rounded-lg border p-3">
+              <p className="text-lg font-bold">{c.value}</p>
+              <p className="text-xs text-muted-foreground">{c.label}</p>
+            </div>
+          ))}
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

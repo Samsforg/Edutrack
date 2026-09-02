@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { getSession } from "@/lib/auth/session";
+import { writeBlockMessage } from "@/lib/billing/access";
 import type { StudentStatus } from "@/types/enums";
 
 const studentSchema = z.object({
@@ -39,6 +40,9 @@ export async function createStudent(
   if (!membership || membership.role !== "SCHOOL_ADMIN") {
     return { error: "Accès refusé" };
   }
+
+  const blocked = await writeBlockMessage(d.schoolId);
+  if (blocked) return { error: blocked };
 
   const supabase = await createClient();
 
@@ -81,6 +85,9 @@ export async function updateStudent(
     return { error: "Accès refusé" };
   }
 
+  const blocked = await writeBlockMessage(d.schoolId);
+  if (blocked) return { error: blocked };
+
   const supabase = await createClient();
   const { error } = await supabase
     .from("students")
@@ -112,6 +119,9 @@ export async function deleteStudent(
   if (!membership || membership.role !== "SCHOOL_ADMIN") {
     return { error: "Accès refusé" };
   }
+
+  const blocked = await writeBlockMessage(schoolId);
+  if (blocked) return { error: blocked };
 
   const supabase = await createClient();
   const { error } = await supabase
@@ -153,6 +163,9 @@ export async function updateStudentStatus(
   if (!membership || membership.role !== "SCHOOL_ADMIN") {
     return { error: "Accès refusé" };
   }
+
+  const blocked = await writeBlockMessage(d.schoolId);
+  if (blocked) return { error: blocked };
 
   const supabase = await createClient();
   const { error } = await supabase

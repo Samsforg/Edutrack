@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { getSession } from "@/lib/auth/session";
+import { writeBlockMessage } from "@/lib/billing/access";
 
 const teacherSchema = z.object({
   schoolId: z.string().uuid(),
@@ -32,6 +33,9 @@ export async function createTeacher(
   if (!membership || membership.role !== "SCHOOL_ADMIN") {
     return { error: "Accès refusé" };
   }
+
+  const blocked = await writeBlockMessage(d.schoolId);
+  if (blocked) return { error: blocked };
 
   const supabase = await createClient();
 
@@ -96,6 +100,9 @@ export async function deleteTeacher(
     return { error: "Accès refusé" };
   }
 
+  const blocked = await writeBlockMessage(schoolId);
+  if (blocked) return { error: blocked };
+
   const supabase = await createClient();
   const { error } = await supabase
     .from("teachers")
@@ -136,6 +143,9 @@ export async function updateTeacher(
     return { error: "Accès refusé" };
   }
 
+  const blocked = await writeBlockMessage(d.schoolId);
+  if (blocked) return { error: blocked };
+
   const supabase = await createClient();
   const { error } = await supabase
     .from("teachers")
@@ -167,6 +177,9 @@ export async function toggleTeacherActive(
   if (!membership || membership.role !== "SCHOOL_ADMIN") {
     return { error: "Accès refusé" };
   }
+
+  const blocked = await writeBlockMessage(schoolId);
+  if (blocked) return { error: blocked };
 
   const supabase = await createClient();
 

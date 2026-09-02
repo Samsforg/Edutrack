@@ -24,6 +24,9 @@ export type AppShellProps = {
 
 const adminNav = [
   { href: "/app/admin", label: "Tableau de bord" },
+  { href: "/app/admin/analytics", label: "Analyse" },
+  { href: "/app/admin/reports", label: "Rapports" },
+  { href: "/app/admin/import", label: "Import" },
   { href: "/app/admin/students", label: "Élèves" },
   { href: "/app/admin/teachers", label: "Enseignants" },
   { href: "/app/admin/classes", label: "Classes" },
@@ -33,6 +36,7 @@ const adminNav = [
   { href: "/app/admin/announcements", label: "Annonces" },
   { href: "/app/admin/link-requests", label: "Codes & demandes" },
   { href: "/app/admin/settings", label: "Paramètres" },
+  { href: "/school/billing", label: "Abonnement" },
 ];
 
 const parentNav = [

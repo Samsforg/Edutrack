@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { getSession } from "@/lib/auth/session";
+import { writeBlockMessage } from "@/lib/billing/access";
 import {
   getParentUserIdsForStudents,
 } from "@/lib/db/notify";
@@ -69,6 +70,9 @@ export async function createAssessment(
   const membership = session.memberships.find((m) => m.school_id === d.schoolId);
   if (!membership) return { error: "Accès refusé" };
 
+  const blocked = await writeBlockMessage(d.schoolId);
+  if (blocked) return { error: blocked };
+
   const teacherId = await resolveTeacher(session.user.id, d.schoolId);
   if (!teacherId && membership.role === "TEACHER") {
     return { error: "Enseignant non trouvé" };
@@ -119,6 +123,9 @@ export async function updateAssessment(
     return { error: "Accès refusé" };
   }
 
+  const blocked = await writeBlockMessage(d.schoolId);
+  if (blocked) return { error: blocked };
+
   const supabase = await createClient();
   const { error } = await supabase
     .from("assessments")
@@ -162,6 +169,9 @@ export async function publishAssessment(
     return { error: "Accès refusé" };
   }
 
+  const blocked = await writeBlockMessage(assessment.school_id);
+  if (blocked) return { error: blocked };
+
   const { error } = await supabase
     .from("assessments")
     .update({ published: publish })
@@ -202,6 +212,9 @@ export async function saveClassGrades(
   if (!membership || !["SCHOOL_ADMIN", "TEACHER"].includes(membership.role)) {
     return { error: "Accès refusé" };
   }
+
+  const blocked = await writeBlockMessage(assessment.school_id);
+  if (blocked) return { error: blocked };
 
   // Build upsert rows
   const rows = d.grades.map((g) => ({
@@ -258,6 +271,9 @@ export async function publishGrades(
   if (!membership || !["SCHOOL_ADMIN", "TEACHER"].includes(membership.role)) {
     return { error: "Accès refusé" };
   }
+
+  const blocked = await writeBlockMessage(assessment.school_id);
+  if (blocked) return { error: blocked };
 
   // Publish assessment + all its grades (batch)
   const now = new Date().toISOString();

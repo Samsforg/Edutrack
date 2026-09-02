@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { getSession } from "@/lib/auth/session";
+import { writeBlockMessage } from "@/lib/billing/access";
 import {
   getParentUserIdsForSchool,
   getParentUserIdsForClass,
@@ -28,6 +29,8 @@ async function requireAdmin(schoolId: string) {
   if (!membership || !["SCHOOL_ADMIN", "SUPER_ADMIN"].includes(membership.role)) {
     return { error: "Accès refusé" };
   }
+  const blocked = await writeBlockMessage(schoolId);
+  if (blocked) return { error: blocked };
   return { session };
 }
 

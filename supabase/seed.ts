@@ -80,6 +80,38 @@ async function main() {
     console.log("  Établissement créé.");
   }
 
+  // 1b. Abonnement : plan Starter en essai gratuit 14 jours (cohérence Phase 7).
+  const { data: existingSub } = await supabase
+    .from("school_subscriptions")
+    .select("id")
+    .eq("school_id", schoolId)
+    .maybeSingle();
+  if (!existingSub) {
+    const { data: starterPlan } = await supabase
+      .from("subscription_plans")
+      .select("id")
+      .eq("code", "starter")
+      .maybeSingle();
+    const now = new Date();
+    const trialEnds = new Date(now.getTime() + 14 * 86400000);
+    const { error: subErr } = await supabase
+      .from("school_subscriptions")
+      .insert({
+        school_id: schoolId,
+        plan_id: starterPlan?.id,
+        status: "trialing",
+        trial_started_at: now.toISOString(),
+        trial_ends_at: trialEnds.toISOString(),
+        current_period_start: now.toISOString(),
+        current_period_end: trialEnds.toISOString(),
+        provider: "manual",
+      });
+    if (subErr) throw subErr;
+    console.log("  Abonnement Starter en essai (14 j) créé.");
+  } else {
+    console.log("  Abonnement existant, skip.");
+  }
+
   // 2. Comptes
   const adminId = await upsertUser(
     "admin@demo.edutrack",
@@ -579,6 +611,35 @@ async function main() {
     }
   }
   console.log("  Évaluations (Phase 5) créées:", assessmentsCreated);
+
+  // 12. Journal d'import démo (Phase 6) — idempotent : n'ajoute que si vide.
+  const { count: jobCount } = await supabase
+    .from("import_jobs")
+    .select("id", { count: "exact", head: true })
+    .eq("school_id", schoolId);
+  if (!jobCount) {
+    const demoJobs = [
+      { type: "classes", total: 3, success: 3 },
+      { type: "subjects", total: 3, success: 3 },
+      { type: "teachers", total: 2, success: 2 },
+      { type: "parents", total: 3, success: 3 },
+      { type: "students", total: 40, success: 40 },
+    ];
+    for (const j of demoJobs) {
+      await supabase.from("import_jobs").insert({
+        school_id: schoolId,
+        user_id: adminId,
+        type: j.type as "classes" | "subjects" | "teachers" | "parents" | "students",
+        status: "completed",
+        total_rows: j.total,
+        success_rows: j.success,
+        error_rows: 0,
+        file_name: `demo-${j.type}.csv`,
+        completed_at: nowIso,
+      });
+    }
+    console.log("  Journal d'import démo créé (import_jobs).");
+  }
 
   console.log("✅ Seed terminé.");
   console.log("Table de comptes de test documentée dans le README.");

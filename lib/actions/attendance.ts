@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { getSession } from "@/lib/auth/session";
+import { writeBlockMessage } from "@/lib/billing/access";
 import { ATTENDANCE_STATUSES } from "@/types/enums";
 import type { AttendanceStatus } from "@/types/enums";
 import { getParentUserIdsForStudents } from "@/lib/db/notify";
@@ -109,6 +110,10 @@ export async function saveAttendance(
       return { error: "Accès refusé : classe non affectée" };
     }
   }
+
+  // Garde-fou abonnement : l'école expirée est en lecture seule.
+  const blocked = await writeBlockMessage(cls.school_id);
+  if (blocked) return { error: blocked };
 
   // Load students of the class to map + verify they belong and get names.
   const { data: students } = await supabase

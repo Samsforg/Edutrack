@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { getSession } from "@/lib/auth/session";
+import { writeBlockMessage } from "@/lib/billing/access";
 
 const subjectSchema = z.object({
   schoolId: z.string().uuid(),
@@ -26,9 +27,12 @@ async function requireAdmin(schoolId: string) {
   if (!membership || membership.role !== "SCHOOL_ADMIN") {
     return { error: "Accès refusé" };
   }
+
+  const blocked = await writeBlockMessage(schoolId);
+  if (blocked) return { error: blocked };
+
   return session;
 }
-
 export async function createSubject(
   input: z.infer<typeof subjectSchema>
 ): Promise<Result> {
