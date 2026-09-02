@@ -26,9 +26,9 @@ test.describe("Dashboards", () => {
     ).toBeVisible();
   });
 
-  test("parent sees at least one linked child", async ({ page }) => {
+  test("parent lands on the new parent portal", async ({ page }) => {
     await loginAs(page, "parent");
-    await expect(page.getByRole("heading", { name: "Espace Parent" })).toBeVisible();
-    await expect(page.getByText("Matricule :")).toBeVisible();
+    await expect(page.getByRole("heading", { name: /Bonjour, / })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Mes enfants" })).toBeVisible();
   });
 });
