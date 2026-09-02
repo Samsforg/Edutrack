@@ -7,6 +7,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { SchoolFormButton } from "./school-form";
 
 export default async function SuperAdminPage() {
   const session = await requireRole(["SUPER_ADMIN"]);
@@ -28,11 +29,14 @@ export default async function SuperAdminPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Plateforme</h1>
-        <p className="text-muted-foreground">
-          Vue d&apos;ensemble de tous les établissements.
-        </p>
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold">Plateforme</h1>
+          <p className="text-muted-foreground">
+            Vue d&apos;ensemble de tous les établissements.
+          </p>
+        </div>
+        <SchoolFormButton />
       </div>
 
       <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
