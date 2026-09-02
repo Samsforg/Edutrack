@@ -9,7 +9,10 @@ const classSchema = z.object({
   schoolId: z.string().uuid(),
   name: z.string().min(1, "Nom de classe requis"),
   gradeLevel: z.string().optional().nullable(),
+  academicYearId: z.string().uuid().optional().nullable(),
 });
+
+const classUpdateSchema = classSchema.extend({ classId: z.string().uuid() });
 
 export type Result = { error?: string; ok?: boolean };
 
@@ -40,11 +43,57 @@ export async function createClass(
     school_id: parsed.data.schoolId,
     name: parsed.data.name,
     grade_level: parsed.data.gradeLevel || null,
+    academic_year_id: parsed.data.academicYearId || null,
   });
   if (error) return { error: error.message };
 
   revalidatePath("/app/admin/classes");
   revalidatePath("/app/admin");
+  return { ok: true };
+}
+
+export async function updateClass(
+  input: z.infer<typeof classUpdateSchema>
+): Promise<Result> {
+  const parsed = classUpdateSchema.safeParse(input);
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Données invalides" };
+  }
+  const session = await requireAdmin(parsed.data.schoolId);
+  if ("error" in session) return session as Result;
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("classes")
+    .update({
+      name: parsed.data.name,
+      grade_level: parsed.data.gradeLevel || null,
+      academic_year_id: parsed.data.academicYearId || null,
+    })
+    .eq("id", parsed.data.classId)
+    .eq("school_id", parsed.data.schoolId);
+
+  if (error) return { error: error.message };
+  revalidatePath("/app/admin/classes");
+  return { ok: true };
+}
+
+export async function deleteClass(
+  classId: string,
+  schoolId: string
+): Promise<Result> {
+  const session = await requireAdmin(schoolId);
+  if ("error" in session) return session as Result;
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("classes")
+    .delete()
+    .eq("id", classId)
+    .eq("school_id", schoolId);
+
+  if (error) return { error: error.message };
+  revalidatePath("/app/admin/classes");
   return { ok: true };
 }
 

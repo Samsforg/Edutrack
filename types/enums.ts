@@ -39,3 +39,12 @@ export const LINK_REQUEST_STATUSES: readonly LinkRequestStatus[] = [
 ];
 
 export type SchoolStatus = "active" | "suspended" | "archived";
+
+export type StudentStatus = "active" | "inactive" | "graduated" | "transferred";
+
+export const STUDENT_STATUSES: readonly StudentStatus[] = [
+  "active",
+  "inactive",
+  "graduated",
+  "transferred",
+];

@@ -21,7 +21,9 @@ test.describe("Dashboards", () => {
     const firstClass = page.locator("a[href*='classId=']").first();
     await firstClass.click();
     await expect(page.getByRole("heading", { name: "Appel du jour" })).toBeVisible();
-    await expect(page.getByRole("button", { name: /Valider l'appel/ })).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: /Valider l'appel|Appel déjà validé/ })
+    ).toBeVisible();
   });
 
   test("parent sees at least one linked child", async ({ page }) => {

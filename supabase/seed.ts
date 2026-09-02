@@ -153,7 +153,7 @@ async function main() {
         name: `${year}-${year + 1}`,
         start_date: `${year}-09-01`,
         end_date: `${year + 1}-07-31`,
-        is_active: true,
+        is_current: true,
       })
       .select("id")
       .single();
@@ -232,7 +232,7 @@ async function main() {
         .single()
     ).data!.id;
 
-  async function getSubject(name: string) {
+  async function getSubject(name: string, code: string) {
     const { data } = await supabase
       .from("subjects")
       .select("id")
@@ -243,15 +243,15 @@ async function main() {
     return (
       await supabase
         .from("subjects")
-        .insert({ school_id: schoolId, name })
+        .insert({ school_id: schoolId, name, code })
         .select("id")
         .single()
     ).data!.id;
   }
 
-  const maths = await getSubject("Mathématiques");
-  const french = await getSubject("Français");
-  const english = await getSubject("Anglais");
+  const maths = await getSubject("Mathématiques", "MAT");
+  const french = await getSubject("Français", "FRA");
+  const english = await getSubject("Anglais", "ANG");
 
   async function assignSubject(classId: string, subjectId: string, teacherId: string) {
     await supabase

@@ -5,6 +5,7 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { getSession } from "@/lib/auth/session";
 import { generateLinkCode } from "@/lib/link-codes";
+import type { StudentStatus } from "@/types/enums";
 
 const studentSchema = z.object({
   schoolId: z.string().uuid(),
@@ -120,6 +121,47 @@ export async function deleteStudent(
     .delete()
     .eq("id", studentId)
     .eq("school_id", schoolId);
+
+  if (error) return { error: error.message };
+
+  revalidatePath("/app/admin/students");
+  return { ok: true };
+}
+
+const statusSchema = z.object({
+  studentId: z.string().uuid(),
+  schoolId: z.string().uuid(),
+  status: z.enum(["active", "inactive", "graduated", "transferred"]),
+});
+
+/**
+ * Updates the lifecycle status of a student.
+ */
+export async function updateStudentStatus(
+  input: z.infer<typeof statusSchema>
+): Promise<SaveStudentResult> {
+  const parsed = statusSchema.safeParse(input);
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Données invalides" };
+  }
+  const d = parsed.data;
+
+  const session = await getSession();
+  if (!session?.user) return { error: "Non authentifié" };
+
+  const membership = session.memberships.find(
+    (m) => m.school_id === d.schoolId
+  );
+  if (!membership || membership.role !== "SCHOOL_ADMIN") {
+    return { error: "Accès refusé" };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("students")
+    .update({ status: d.status as StudentStatus })
+    .eq("id", d.studentId)
+    .eq("school_id", d.schoolId);
 
   if (error) return { error: error.message };
 

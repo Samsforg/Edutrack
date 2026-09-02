@@ -4,6 +4,8 @@ export type ClassDetail = {
   id: string;
   name: string;
   grade_level: string | null;
+  academic_year_id: string | null;
+  academic_year_name: string | null;
   student_count: number;
   subjects: {
     subject_id: string;
@@ -21,7 +23,7 @@ export async function listClasses(schoolId: string): Promise<ClassDetail[]> {
 
   const { data: classes, error } = await supabase
     .from("classes")
-    .select("id, name, grade_level, school_id")
+    .select("id, name, grade_level, school_id, academic_year_id, academic_years(name)")
     .eq("school_id", schoolId)
     .order("name", { ascending: true });
 
@@ -47,6 +49,12 @@ export async function listClasses(schoolId: string): Promise<ClassDetail[]> {
       id: c.id,
       name: c.name,
       grade_level: c.grade_level,
+      academic_year_id: (
+        c.academic_years as unknown as { id: string } | null
+      )?.id ?? null,
+      academic_year_name: (
+        c.academic_years as unknown as { name: string } | null
+      )?.name ?? null,
       student_count: countRes.count ?? 0,
       subjects: (subjectsRes.data ?? []).map((s) => ({
         subject_id: s.subject_id,

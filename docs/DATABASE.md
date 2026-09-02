@@ -17,6 +17,8 @@ dashboard Supabase).
 | `20250401000006_fix_parent_of_student.sql` | `parent_of_student` lié à `auth.uid()` |
 | `20250401000007_fix_notifications_rls.sql` | staff peut notifier les parents |
 | `20250401000008_fix_members_recursion.sql` | récursion `school_members` + `members_select_own` |
+| `20250401000009_school_management.sql` | gestion d'établissement : `students.status`, contacts `schools`, `academic_years.is_current` (1 seule année courante), `subjects.code` unique, `teachers.is_active`, triggers d'intégrité inter-écoles |
+| `20250401000010_school_admin_update_policy.sql` | un `SCHOOL_ADMIN` peut mettre à jour sa propre école (contacts) |
 
 > Les migrations sont **dans l'ordre** : certaines fonctions SQL sont validées à
 > la création et exigent que les tables existent (table → helpers → rls).
@@ -34,7 +36,31 @@ dashboard Supabase).
 ## Enums
 
 `user_role`, `school_status`, `attendance_status`, `notification_type`,
-`link_request_status`, `announcement_audience`.
+`link_request_status`, `announcement_audience`, `student_status`
+(`active`, `inactive`, `graduated`, `transferred`).
+
+## Colonnes ajoutées par la 0009
+
+- `schools.email/phone/address/city/country` — coordonnées de contact.
+- `academic_years.is_current` (ex-`is_active`) — année courante, avec index
+  unique partiel `(school_id) WHERE is_current` : une seule année courante par école.
+- `subjects.code` (backfill `S001`…) — index unique partiel `(school_id, code)`.
+- `students.status` (défaut `active`) — cycle de vie + index `(school_id, status)`.
+- `teachers.is_active` (défaut `true`) — désactivation sans suppression +
+  index `(school_id, is_active)`.
+
+## Triggers d'intégrité inter-écoles (0009)
+
+Fonctions `security definer` en `search_path = public` empêchant une école de
+référencer un enregistrement d'une autre école :
+
+- `classes` → `academic_year_id` de la même école.
+- `class_subjects` → classe, matière et enseignant de la même école.
+- `students` → classe de la même école.
+- `student_parents` → élève et parent de la même école.
+
+Ces triggers complètent la RLS (prévention des incohérences défensives pour le
+code privilégié tel que le service role).
 
 ## RPC (flux de liaison)
 

@@ -1,5 +1,6 @@
 import { requireRole } from "@/lib/auth/guard";
 import { listClasses, listTeachers, listSubjects } from "@/lib/db/classes";
+import { listAcademicYears } from "@/lib/db/academic-years";
 import {
   Card,
   CardContent,
@@ -8,7 +9,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ClassFormButton } from "./class-form";
+import { ClassFormButton, ClassDeleteButton } from "./class-form";
 import { SubjectAssigner } from "./subject-assigner";
 
 export default async function ClassesPage() {
@@ -25,10 +26,11 @@ export default async function ClassesPage() {
     );
   }
 
-  const [classes, allTeachers, allSubjects] = await Promise.all([
+  const [classes, allTeachers, allSubjects, academicYears] = await Promise.all([
     listClasses(schoolId),
     listTeachers(schoolId),
     listSubjects(schoolId),
+    listAcademicYears(schoolId),
   ]);
 
   return (
@@ -40,7 +42,7 @@ export default async function ClassesPage() {
             {classes.length} classe(s)
           </p>
         </div>
-        <ClassFormButton schoolId={schoolId} />
+        <ClassFormButton schoolId={schoolId} academicYears={academicYears} />
       </div>
 
       <div className="space-y-4">
@@ -55,11 +57,21 @@ export default async function ClassesPage() {
             <Card key={c.id}>
               <CardHeader>
                 <CardTitle className="flex items-center justify-between">
-                  {c.name}
+                  <div className="flex items-center gap-2">
+                    {c.name}
+                    <ClassDeleteButton
+                      classId={c.id}
+                      schoolId={schoolId}
+                      name={c.name}
+                    />
+                  </div>
                   <Badge variant="secondary">{c.student_count} élèves</Badge>
                 </CardTitle>
                 <CardDescription>
                   {c.grade_level ? `Niveau : ${c.grade_level}` : "Niveau non défini"}
+                  {c.academic_year_name
+                    ? ` · Année : ${c.academic_year_name}`
+                    : ""}
                 </CardDescription>
               </CardHeader>
               <CardContent>

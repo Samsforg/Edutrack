@@ -22,7 +22,69 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { createStudent, deleteStudent } from "@/lib/actions/students";
+import { createStudent, deleteStudent, updateStudentStatus } from "@/lib/actions/students";
+import { STUDENT_STATUSES } from "@/types/enums";
+import type { StudentListItem } from "@/lib/db/students";
+
+const statusLabels: Record<string, string> = {
+  active: "Actif",
+  inactive: "Inactif",
+  graduated: "Diplômé",
+  transferred: "Transféré",
+};
+
+export function StudentStatusSelect({
+  student,
+  schoolId,
+}: {
+  student: StudentListItem;
+  schoolId: string;
+}) {
+  const router = useRouter();
+  const [pending, startTransition] = useTransition();
+
+  function onChange(value: string) {
+    startTransition(async () => {
+      const result = await updateStudentStatus({
+        studentId: student.id,
+        schoolId,
+        status: value as (typeof STUDENT_STATUSES)[number],
+      });
+      if (result.error) {
+        toast.error(result.error);
+        return;
+      }
+      toast.success("Statut mis à jour");
+      router.refresh();
+    });
+  }
+
+  return (
+    <span className="inline-flex items-center gap-1">
+      <span
+        className={`inline-block h-2 w-2 rounded-full ${
+          student.status === "active"
+            ? "bg-emerald-500"
+            : student.status === "inactive"
+              ? "bg-amber-500"
+              : "bg-muted-foreground"
+        }`}
+      />
+      <select
+        value={student.status}
+        onChange={(e) => onChange(e.target.value)}
+        disabled={pending}
+        className="h-7 rounded border-none bg-transparent text-sm disabled:opacity-50"
+      >
+        {STUDENT_STATUSES.map((s) => (
+          <option key={s} value={s}>
+            {statusLabels[s]}
+          </option>
+        ))}
+      </select>
+    </span>
+  );
+}
 
 export function StudentFormButton({
   schoolId,

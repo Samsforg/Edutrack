@@ -20,7 +20,7 @@ base de données, ni utilisateurs, ni dépendance technique avec Edukora.
 
 - **Espace parent** : enfants liés, présences en direct, moyennes, notifications Realtime.
 - **Espace enseignant** : prise d'appel par classe, saisie des notes.
-- **Espace admin école** : gestion élèves/enseignants/classes, annonces, approbation des liaisons parent-enfant, import CSV, analytique.
+- **Espace admin école** : gestion élèves (statuts), enseignants (activation), classes (année scolaire), matières (codes uniques), années scolaires (1 seule courante), répertoire parents, paramètres de l'établissement, annonces, approbation des liaisons parent-enfant, import CSV, analytique.
 - **Espace super-admin** : vue plateforme, création d'établissements.
 - **Liaison parent-enfant par code** : l'école affiche un code, le parent le saisit, l'admin approuve.
 - **Sécurité multi-tenant** : Row Level Security (PostgreSQL), isolation stricte des données par école et par rôle.

@@ -15,7 +15,8 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { createTeacher, deleteTeacher } from "@/lib/actions/teachers";
+import { createTeacher, deleteTeacher, toggleTeacherActive } from "@/lib/actions/teachers";
+import type { TeacherDetail } from "@/lib/db/teachers";
 
 export function TeacherFormButton({ schoolId }: { schoolId: string }) {
   const router = useRouter();
@@ -142,6 +143,40 @@ export function TeacherDeleteButton({
       disabled={pending}
     >
       Supprimer
+    </Button>
+  );
+}
+
+export function TeacherToggleButton({
+  teacher,
+  schoolId,
+}: {
+  teacher: TeacherDetail;
+  schoolId: string;
+}) {
+  const router = useRouter();
+  const [pending, startTransition] = useTransition();
+
+  function onToggle() {
+    startTransition(async () => {
+      const result = await toggleTeacherActive(teacher.id, schoolId);
+      if (result.error) {
+        toast.error(result.error);
+        return;
+      }
+      toast.success(teacher.is_active ? "Enseignant désactivé" : "Enseignant activé");
+      router.refresh();
+    });
+  }
+
+  return (
+    <Button
+      variant={teacher.is_active ? "outline" : "default"}
+      size="sm"
+      onClick={onToggle}
+      disabled={pending}
+    >
+      {teacher.is_active ? "Désactiver" : "Réactiver"}
     </Button>
   );
 }

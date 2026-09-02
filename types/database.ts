@@ -10,6 +10,7 @@ export type Json =
 
 export type UserRole = "SUPER_ADMIN" | "SCHOOL_ADMIN" | "TEACHER" | "PARENT";
 export type SchoolStatus = "active" | "suspended" | "archived";
+export type StudentStatus = "active" | "inactive" | "graduated" | "transferred";
 export type AttendanceStatus = "present" | "absent" | "late" | "excused";
 export type NotificationType =
   | "attendance"
@@ -51,6 +52,11 @@ export interface Database {
           code: string;
           logo_url: string | null;
           status: SchoolStatus;
+          email: string | null;
+          phone: string | null;
+          address: string | null;
+          city: string | null;
+          country: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -60,6 +66,11 @@ export interface Database {
           code: string;
           logo_url?: string | null;
           status?: SchoolStatus;
+          email?: string | null;
+          phone?: string | null;
+          address?: string | null;
+          city?: string | null;
+          country?: string | null;
         };
         Update: {
           id?: string;
@@ -67,6 +78,11 @@ export interface Database {
           code?: string;
           logo_url?: string | null;
           status?: SchoolStatus;
+          email?: string | null;
+          phone?: string | null;
+          address?: string | null;
+          city?: string | null;
+          country?: string | null;
         };
       };
       school_members: {
@@ -97,7 +113,7 @@ export interface Database {
           name: string;
           start_date: string;
           end_date: string;
-          is_active: boolean;
+          is_current: boolean;
           created_at: string;
           updated_at: string;
         };
@@ -107,7 +123,7 @@ export interface Database {
           name: string;
           start_date: string;
           end_date: string;
-          is_active?: boolean;
+          is_current?: boolean;
         };
         Update: {
           id?: string;
@@ -115,7 +131,7 @@ export interface Database {
           name?: string;
           start_date?: string;
           end_date?: string;
-          is_active?: boolean;
+          is_current?: boolean;
         };
       };
       classes: {
@@ -153,6 +169,7 @@ export interface Database {
           last_name: string;
           email: string | null;
           phone: string | null;
+          is_active: boolean;
           created_at: string;
           updated_at: string;
         };
@@ -165,6 +182,7 @@ export interface Database {
           last_name: string;
           email?: string | null;
           phone?: string | null;
+          is_active?: boolean;
         };
         Update: {
           id?: string;
@@ -175,6 +193,7 @@ export interface Database {
           last_name?: string;
           email?: string | null;
           phone?: string | null;
+          is_active?: boolean;
         };
       };
       subjects: {
@@ -232,6 +251,7 @@ export interface Database {
           last_name: string;
           birth_date: string | null;
           gender: string | null;
+          status: StudentStatus;
           enrollment_date: string;
           created_at: string;
           updated_at: string;
@@ -247,6 +267,7 @@ export interface Database {
           last_name: string;
           birth_date?: string | null;
           gender?: string | null;
+          status?: StudentStatus;
           enrollment_date?: string;
         };
         Update: {
@@ -260,6 +281,7 @@ export interface Database {
           last_name?: string;
           birth_date?: string | null;
           gender?: string | null;
+          status?: StudentStatus;
           enrollment_date?: string;
         };
       };
@@ -501,6 +523,7 @@ export interface Database {
     Enums: {
       user_role: UserRole;
       school_status: SchoolStatus;
+      student_status: StudentStatus;
       attendance_status: AttendanceStatus;
       notification_type: NotificationType;
       link_request_status: LinkRequestStatus;

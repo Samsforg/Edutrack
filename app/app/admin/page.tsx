@@ -35,6 +35,10 @@ export default async function AdminDashboardPage() {
     { href: "/app/admin/students", label: "Élèves" },
     { href: "/app/admin/teachers", label: "Enseignants" },
     { href: "/app/admin/classes", label: "Classes" },
+    { href: "/app/admin/subjects", label: "Matières" },
+    { href: "/app/admin/academic-years", label: "Années scolaires" },
+    { href: "/app/admin/parents", label: "Parents" },
+    { href: "/app/admin/settings", label: "Paramètres" },
     { href: "/app/admin/announcements", label: "Annonces" },
     { href: "/app/admin/link-requests", label: "Codes & demandes" },
     { href: "/app/admin/import", label: "Import CSV" },
@@ -55,14 +59,21 @@ export default async function AdminDashboardPage() {
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         {[
           { label: "Élèves", value: stats.students },
+          { label: "Élèves actifs", value: stats.activeStudents },
           { label: "Enseignants", value: stats.teachers },
+          { label: "Enseignants actifs", value: stats.activeTeachers },
           { label: "Parents", value: stats.parents },
           { label: "Classes", value: stats.classes },
+          { label: "Matières", value: stats.subjects },
+          {
+            label: "Année courante",
+            value: stats.currentAcademicYear ?? "—",
+          },
         ].map((s) => (
           <Card key={s.label}>
             <CardContent className="p-4">
               <p className="text-xs text-muted-foreground">{s.label}</p>
-              <p className="mt-1 text-3xl font-bold">{s.value}</p>
+              <p className="mt-1 truncate text-2xl font-bold">{s.value}</p>
             </CardContent>
           </Card>
         ))}

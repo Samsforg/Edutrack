@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -21,7 +22,23 @@ export type AppShellProps = {
   children: React.ReactNode;
 };
 
-export function AppShell({ user, homePath, children }: AppShellProps) {
+const adminNav = [
+  { href: "/app/admin", label: "Tableau de bord" },
+  { href: "/app/admin/students", label: "Élèves" },
+  { href: "/app/admin/teachers", label: "Enseignants" },
+  { href: "/app/admin/classes", label: "Classes" },
+  { href: "/app/admin/subjects", label: "Matières" },
+  { href: "/app/admin/academic-years", label: "Années scolaires" },
+  { href: "/app/admin/parents", label: "Parents" },
+  { href: "/app/admin/announcements", label: "Annonces" },
+  { href: "/app/admin/link-requests", label: "Codes & demandes" },
+  { href: "/app/admin/settings", label: "Paramètres" },
+];
+
+export function AppShell({ user, memberships, homePath, children }: AppShellProps) {
+  const pathname = usePathname();
+  const isAdmin = memberships.some((m) => m.role === "SCHOOL_ADMIN");
+
   return (
     <div className="flex min-h-full flex-col">
       <header className="sticky top-0 z-20 border-b bg-background/95 backdrop-blur">
@@ -70,6 +87,32 @@ export function AppShell({ user, homePath, children }: AppShellProps) {
           </DropdownMenu>
           </div>
         </div>
+
+        {isAdmin ? (
+          <nav className="border-t">
+            <div className="mx-auto flex w-full max-w-6xl items-center gap-1 overflow-x-auto px-4 py-1">
+              {adminNav.map((item) => {
+                const active =
+                  item.href === "/app/admin"
+                    ? pathname === "/app/admin"
+                    : pathname.startsWith(item.href);
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={`whitespace-nowrap rounded-md px-3 py-1.5 text-sm transition-colors ${
+                      active
+                        ? "bg-primary text-primary-foreground"
+                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                    }`}
+                  >
+                    {item.label}
+                  </Link>
+                );
+              })}
+            </div>
+          </nav>
+        ) : null}
       </header>
 
       <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6">

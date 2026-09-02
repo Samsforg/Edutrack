@@ -15,14 +15,28 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { createClass } from "@/lib/actions/classes";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { createClass, deleteClass } from "@/lib/actions/classes";
 
-export function ClassFormButton({ schoolId }: { schoolId: string }) {
+export function ClassFormButton({
+  schoolId,
+  academicYears,
+}: {
+  schoolId: string;
+  academicYears: { id: string; name: string }[];
+}) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [pending, startTransition] = useTransition();
   const [name, setName] = useState("");
   const [gradeLevel, setGradeLevel] = useState("");
+  const [academicYearId, setAcademicYearId] = useState("");
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -31,6 +45,7 @@ export function ClassFormButton({ schoolId }: { schoolId: string }) {
         schoolId,
         name,
         gradeLevel: gradeLevel || undefined,
+        academicYearId: academicYearId || undefined,
       });
       if (result.error) {
         toast.error(result.error);
@@ -39,6 +54,7 @@ export function ClassFormButton({ schoolId }: { schoolId: string }) {
       toast.success("Classe créée");
       setName("");
       setGradeLevel("");
+      setAcademicYearId("");
       setOpen(false);
       router.refresh();
     });
@@ -76,6 +92,21 @@ export function ClassFormButton({ schoolId }: { schoolId: string }) {
               placeholder="Sixième"
             />
           </div>
+          <div className="space-y-2">
+            <Label>Année scolaire (optionnel)</Label>
+            <Select value={academicYearId} onValueChange={setAcademicYearId}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Aucune" />
+              </SelectTrigger>
+              <SelectContent>
+                {academicYears.map((y) => (
+                  <SelectItem key={y.id} value={y.id}>
+                    {y.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
           <DialogFooter>
             <Button type="submit" disabled={pending}>
               {pending ? "Création…" : "Créer"}
@@ -84,5 +115,44 @@ export function ClassFormButton({ schoolId }: { schoolId: string }) {
         </form>
       </DialogContent>
     </Dialog>
+  );
+}
+
+export function ClassDeleteButton({
+  classId,
+  schoolId,
+  name,
+}: {
+  classId: string;
+  schoolId: string;
+  name: string;
+}) {
+  const router = useRouter();
+  const [pending, startTransition] = useTransition();
+
+  function onDelete() {
+    if (!confirm(`Supprimer la classe ${name} ? Les élèves seront conservés (sans classe).`))
+      return;
+    startTransition(async () => {
+      const result = await deleteClass(classId, schoolId);
+      if (result.error) {
+        toast.error(result.error);
+        return;
+      }
+      toast.success("Classe supprimée");
+      router.refresh();
+    });
+  }
+
+  return (
+    <Button
+      variant="ghost"
+      size="sm"
+      className="text-destructive hover:text-destructive"
+      onClick={onDelete}
+      disabled={pending}
+    >
+      Supprimer
+    </Button>
   );
 }
