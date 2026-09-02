@@ -38,6 +38,7 @@ const adminNav = [
 const parentNav = [
   { href: "/app/parent", label: "Tableau de bord" },
   { href: "/app/parent/children", label: "Mes enfants" },
+  { href: "/app/parent/announcements", label: "Annonces" },
   { href: "/app/parent/notifications", label: "Notifications" },
   { href: "/app/parent/link", label: "Lier un enfant" },
   { href: "/app/parent/link-requests", label: "Mes demandes" },
@@ -45,9 +46,9 @@ const parentNav = [
 
 const teacherNav = [
   { href: "/app/teacher", label: "Tableau de bord" },
-  { href: "/app/teacher/attendance", label: "Faire l'appel" },
+  { href: "/app/teacher/attendance", label: "Assiduité" },
   { href: "/app/teacher/attendance/history", label: "Historique" },
-  { href: "/app/teacher/grades", label: "Notes" },
+  { href: "/app/teacher/grades", label: "Évaluations & notes" },
 ];
 
 export function AppShell({ user, memberships, homePath, children }: AppShellProps) {

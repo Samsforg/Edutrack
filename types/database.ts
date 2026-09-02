@@ -382,13 +382,17 @@ export interface Database {
           subject_id: string;
           classroom_id: string | null;
           teacher_id: string | null;
+          assessment_id: string | null;
           title: string;
           score: number;
           max_score: number;
           coefficient: number;
           grade_date: string;
           comment: string | null;
+          published_at: string | null;
+          graded_by: string | null;
           created_at: string;
+          updated_at: string;
         };
         Insert: {
           id?: string;
@@ -397,12 +401,15 @@ export interface Database {
           subject_id: string;
           classroom_id?: string | null;
           teacher_id?: string | null;
+          assessment_id?: string | null;
           title: string;
           score: number;
           max_score: number;
           coefficient?: number;
           grade_date?: string;
           comment?: string | null;
+          published_at?: string | null;
+          graded_by?: string | null;
         };
         Update: {
           id?: string;
@@ -411,12 +418,95 @@ export interface Database {
           subject_id?: string;
           classroom_id?: string | null;
           teacher_id?: string | null;
+          assessment_id?: string | null;
           title?: string;
           score?: number;
           max_score?: number;
           coefficient?: number;
           grade_date?: string;
           comment?: string | null;
+          published_at?: string | null;
+          graded_by?: string | null;
+        };
+      };
+      assessments: {
+        Row: {
+          id: string;
+          school_id: string;
+          class_id: string;
+          subject_id: string;
+          teacher_id: string;
+          academic_period_id: string;
+          title: string;
+          description: string | null;
+          max_score: number;
+          coefficient: number;
+          assessment_date: string;
+          published: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          school_id: string;
+          class_id: string;
+          subject_id: string;
+          teacher_id: string;
+          academic_period_id: string;
+          title: string;
+          description?: string | null;
+          max_score: number;
+          coefficient?: number;
+          assessment_date?: string;
+          published?: boolean;
+        };
+        Update: {
+          id?: string;
+          school_id?: string;
+          class_id?: string;
+          subject_id?: string;
+          teacher_id?: string;
+          academic_period_id?: string;
+          title?: string;
+          description?: string | null;
+          max_score?: number;
+          coefficient?: number;
+          assessment_date?: string;
+          published?: boolean;
+        };
+      };
+      academic_periods: {
+        Row: {
+          id: string;
+          school_id: string;
+          academic_year_id: string;
+          name: string;
+          type: string;
+          start_date: string;
+          end_date: string;
+          is_current: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          school_id: string;
+          academic_year_id: string;
+          name: string;
+          type?: string;
+          start_date: string;
+          end_date: string;
+          is_current?: boolean;
+        };
+        Update: {
+          id?: string;
+          school_id?: string;
+          academic_year_id?: string;
+          name?: string;
+          type?: string;
+          start_date?: string;
+          end_date?: string;
+          is_current?: boolean;
         };
       };
       announcements: {
@@ -429,6 +519,8 @@ export interface Database {
           title: string;
           body: string;
           important: boolean;
+          published_at: string | null;
+          archived_at: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -441,6 +533,8 @@ export interface Database {
           title: string;
           body: string;
           important?: boolean;
+          published_at?: string | null;
+          archived_at?: string | null;
         };
         Update: {
           id?: string;
@@ -451,6 +545,8 @@ export interface Database {
           title?: string;
           body?: string;
           important?: boolean;
+          published_at?: string | null;
+          archived_at?: string | null;
         };
       };
       notifications: {

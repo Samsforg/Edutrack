@@ -116,6 +116,44 @@ autre école ne lisent ni n'écrivent (R2/R5/R6/R7), un parent n'écrit ni ne
 supprime (R3/R12), l'admin écrit (R4), le trigger refuse une école étrangère
 (R8), les notifications sont scopées/non falsifiables (R9-R11).
 
+## Notes, évaluations & annonces (Phase 5, migration 0014)
+
+- **Nouvelles tables** : `academic_periods` et `assessments` (évaluation :
+  école, classe, matière, enseignant, **période**, barème, `published`).
+- **Nouvelles colonnes `grades`** : `assessment_id` (nullable — note
+  structurée), `published_at` (nullable — brouillon), `graded_by`.
+- **Nouvelles colonnes `announcements`** : `published_at` / `archived_at`
+  (cycle brouillon → publiée → archivée).
+- **Helpers `security definer`** : `user_teaches_subject_in_class`
+  (l'enseignant doit être rattaché à la classe **et** à la matière via
+  `class_subjects`), `user_may_grade_assessment`, `assert_assessment_same_school`,
+  `assert_academic_period_same_school` (triggers cross-école).
+- **RLS `grades`** : SELECT = super-admin / membre non parent de l'école /
+  **parent de l'élève uniquement sur les notes publiées** ; écriture = admin de
+  l'école de l'élève ou enseignant autorisé sur l'évaluation.
+- **RLS `assessments`** : SELECT = super-admin / admin / enseignant de la
+  classe+matière / parent (publiées de la classe de son enfant) ; écriture =
+  admin ou enseignant autorisé.
+- **RLS `announcements`** : SELECT = super-admin / membre non parent de l'école
+  / parent **uniquement sur les publiées non archivées** (école entière ou
+  classe cible) ; écriture = admin de l'école ou super-admin.
+- **Écriture enseignante via serveur** : un enseignant ne choisit jamais
+  librement une évaluation ou une classe : les server actions vérifient le rôle,
+  l'adhésion à l'école, puis la RLS confirme `user_teaches_subject_in_class`.
+
+Vérification automatisée sur le backend réel (16 assertions) :
+
+```bash
+npx tsx scripts/grades-security-check.ts
+```
+
+Couverture : parent lié → note publiée OK / brouillon interdit (G1/G1b), autre
+parent → rien (G2), parent → écriture bloquée (G3), admin lit brouillons (G4),
+**autre école** → lectures et écritures bloquées sur notes, évaluations,
+périodes et annonces (G5-G7/A2/P1b/N3), père ne lit que les évaluations
+publiées (A1), annonces brouillon invisibles au parent (N1), parent ne crée pas
+d'annonce (N2), admin lit les brouillons (N4).
+
 ## Fuites corrigées pendant le développement
 
 1. **`parent_of_student`** (migration `0006`) : initialement scopé à l'école, il
@@ -136,6 +174,16 @@ supprime (R3/R12), l'admin écrit (R4), le trigger refuse une école étrangère
 6. **Approbation parent** (migration `0011`) : un parent aurait pu forcer
    `status = approved` via UPDATE RLS. Réservé au staff
    (`link_requests_update_admin_only`).
+7. **Index partiel sur `grades (assessment_id, student_id)`** : `WHERE
+   assessment_id IS NOT NULL` empêchait `ON CONFLICT` (upsert de la saisie).
+   Corrigé en index unique **non partiel** (les NULL restent distincts).
+8. **Embed PostgREST `subject(name)`** invalide dans `getAssessmentsForClassSubject` :
+   le nom de ressource embarquée est `subjects`. Corrigé en
+   `subject:subjects(name)` — sinon liste d'évaluations vide silencieuse.
+9. **Fichier `"use server"` exportant un objet** (`assessmentSchema`/`batchGradesSchema`) :
+   Next 16 rejette tout export non-fonction asynchrone → l'action `createAssessment`
+   échouait en 500 côté serveur (bouton « Création… » bloqué). Les schémas Zod
+   sont désormais privés dans le module.
 
 ## Recommandations
 

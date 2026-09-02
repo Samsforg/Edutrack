@@ -10,8 +10,8 @@
 
 EduTrack est un SaaS EdTech B2B2C qui permet aux établissements scolaires de
 communiquer avec les parents et de leur fournir un suivi quasi temps réel de la
-scolarité de leurs enfants : présences, absences, retards, notes, annonces et
-notifications.
+scolarité de leurs enfants : présences, absences, retards, **notes structurées
+et moyennes**, annonces et notifications.
 
 EduTrack est un projet **totalement indépendant** et ne partage ni code, ni
 base de données, ni utilisateurs, ni dépendance technique avec Edukora.
@@ -19,12 +19,13 @@ base de données, ni utilisateurs, ni dépendance technique avec Edukora.
 ## Fonctionnalités
 
 - **Espace parent** : portail dédié — dashboard « Bonjour », enfants liés, détail enfant protégé par RLS, liaison par code en 2 étapes.
-- **Espace enseignant** : prise d'appel par classe (date, 4 statuts, retard → heure d'arrivée, note, appel partiel), historique des appels, tableau de bord « Mes classes » avec statut appel, saisie des notes.
-- **Espace parent** : dashboard « Aujourd'hui » **en direct** (Realtime), suivi d'assiduité (taux + journal + filtres), notifications d'absence/retard.
-- **Espace admin école** : gestion élèves (statuts), enseignants (activation), classes (année scolaire), matières (codes uniques), années scolaires (1 seule courante), répertoire parents, paramètres de l'établissement, annonces, approbation des liaisons parent-enfant, import CSV, analytique.
+- **Espace enseignant** : prise d'appel par classe (date, 4 statuts, retard → heure d'arrivée, note, appel partiel), historique des appels, tableau de bord « Mes classes » avec statut appel, **saisie des notes** : sélecteurs classe/matière/période, création d'évaluations (barème, coefficient, période), grille de saisie, enregistrement en brouillon ou **publication avec notification aux parents**.
+- **Espace parent** : dashboard « Aujourd'hui » **en direct** (Realtime), suivi d'assiduité (taux + journal + filtres), notifications d'absence/retard, **notes publiées d'un enfant avec moyennes par matière**, **annonces de l'établissement et de la classe**.
+- **Espace admin école** : gestion élèves (statuts), enseignants (activation), classes (année scolaire), matières (codes uniques), années scolaires (1 seule courante), répertoire parents, paramètres de l'établissement, **annonces (brouillon → publiée → archivée, notification des parents)**, **aperçu des performances académiques (moyennes par matière)**, approbation des liaisons parent-enfant, import CSV, analytique.
 - **Espace super-admin** : vue plateforme, création d'établissements.
 - **Liaison parent-enfant par code sécurisée** : codes hachés (SHA-256 salé, jamais en clair), expiration 7 j, usage unique, révocation, rate limiting, demande → approbation/rejet par l'école.
-- **Sécurité multi-tenant** : Row Level Security (PostgreSQL), isolation stricte des données par école et par rôle, trigger d'intégrité inter-écoles sur la présence.
+- **Notes structurées & moyennes** : évaluations par période (Trimestre 1/2), publication explicite des notes (brouillon ≠ publiée), moyennes pondérées par matière (élève, classe, école), calcul **pur** testé unitairement.
+- **Sécurité multi-tenant** : Row Level Security (PostgreSQL), isolation stricte des données par école et par rôle, trigger d'intégrité inter-écoles sur la présence, les évaluations et les périodes.
 - **Temps réel** : présence et notifications livrées en direct via Supabase Realtime (Postgres Changes), RLS-scopé par abonné — sans polling.
 
 ## Stack
@@ -103,8 +104,9 @@ npm run db:seed
 ```
 
 Ce script crée l'« Établissement Démo EduTrack », 3 classes (6ème A, 5ème A,
-3ème A), des élèves, 2 enseignants, 3 parents, des présences, des notes et des
-annonces.
+3ème A), des élèves, 2 enseignants, 3 parents, des présences, des annonces, et
+en Phase 5 : 2 périodes (Trimestre 1/2), 12 évaluations (6 publiées dont
+« Contrôle n°1 », 6 brouillons) et **36 notes structurées publiées**.
 
 ### Comptes de test
 
@@ -140,6 +142,7 @@ Vérification RLS sur le backend réel (autorisations multi-tenant) :
 ```bash
 npx tsx scripts/parent-linking-security-check.ts
 npx tsx scripts/attendance-security-check.ts
+npx tsx scripts/grades-security-check.ts
 ```
 
 ## Lint & build
@@ -164,6 +167,10 @@ build à chaque push/PR.
 - [Authentification & autorisation](docs/AUTH.md)
 - [Liaison parent-élève par code](docs/PARENT_LINKING.md)
 - [Prise de présence](docs/ATTENDANCE.md)
+- [Notes & publication](docs/GRADES.md)
+- [Évaluations & périodes](docs/ASSESSMENTS.md)
+- [Moyennes](docs/AVERAGES.md)
+- [Annonces](docs/ANNOUNCEMENTS.md)
 - [Realtime](docs/REALTIME.md)
 - [Notifications](docs/NOTIFICATIONS.md)
 - [Déploiement](docs/DEPLOYMENT.md)

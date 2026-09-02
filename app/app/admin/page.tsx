@@ -2,6 +2,7 @@ import Link from "next/link";
 import { requireRole } from "@/lib/auth/guard";
 import { getAdminStats } from "@/lib/db/admin";
 import { getSchoolTodayAttendance } from "@/lib/db/attendance-history";
+import { getSchoolAverages } from "@/lib/db/academic";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -36,6 +37,7 @@ export default async function AdminDashboardPage() {
   const todayRows = await getSchoolTodayAttendance(schoolId, today);
   const absents = todayRows.filter((r) => r.status === "absent");
   const unmarked = todayRows.filter((r) => r.status == null);
+  const schoolAvg = await getSchoolAverages(schoolId);
 
   const quickActions = [
     { href: "/app/admin/students", label: "Élèves" },
@@ -116,6 +118,49 @@ export default async function AdminDashboardPage() {
             </p>
           </div>
         </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Performances académiques</CardTitle>
+          <CardDescription>
+            Moyennes calculées sur les notes publiées.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-4 sm:grid-cols-3">
+          <div className="rounded-lg border p-3">
+            <p className="text-xs text-muted-foreground">Moyenne générale</p>
+            <p className="mt-1 text-2xl font-bold">
+              {schoolAvg.overall_average != null
+                ? `${schoolAvg.overall_average.toFixed(2)} / 20`
+                : "—"}
+            </p>
+          </div>
+          <div className="rounded-lg border p-3">
+            <p className="text-xs text-muted-foreground">Évaluations notées</p>
+            <p className="mt-1 text-2xl font-bold">{schoolAvg.total_evals}</p>
+          </div>
+          <div className="rounded-lg border p-3">
+            <p className="text-xs text-muted-foreground">Matières évaluées</p>
+            <p className="mt-1 text-2xl font-bold">{schoolAvg.total_subjects}</p>
+          </div>
+        </CardContent>
+        {schoolAvg.by_class.length > 0 ? (
+          <CardContent className="border-t pt-4">
+            <p className="mb-2 text-xs font-medium text-muted-foreground">Moyenne par classe</p>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {schoolAvg.by_class.map((c) => (
+                <div key={c.class_id} className="flex items-center justify-between rounded-lg border px-3 py-2 text-sm">
+                  <span className="font-medium">{c.class_name}</span>
+                  <span className="text-muted-foreground">
+                    {c.average != null ? `${c.average.toFixed(2)} / 20` : "—"}
+                    <span className="ml-1 text-xs">({c.eval_count})</span>
+                  </span>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        ) : null}
       </Card>
 
       <div className="grid gap-4 lg:grid-cols-2">

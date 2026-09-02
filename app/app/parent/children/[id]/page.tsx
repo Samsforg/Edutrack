@@ -57,6 +57,15 @@ export default async function ParentChildDetailPage({
         </Badge>
       </div>
 
+      <div className="flex flex-wrap gap-2">
+        <Button asChild variant="outline" size="sm">
+          <Link href={`/app/parent/children/${id}/attendance`}>Assiduité</Link>
+        </Button>
+        <Button asChild variant="outline" size="sm">
+          <Link href={`/app/parent/children/${id}/grades`}>Notes</Link>
+        </Button>
+      </div>
+
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader>

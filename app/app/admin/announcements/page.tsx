@@ -1,6 +1,6 @@
 import { requireRole } from "@/lib/auth/guard";
 import { listClassesOptions } from "@/lib/db/students";
-import { getVisibleAnnouncements } from "@/lib/db/announcements";
+import { getAdminAnnouncements } from "@/lib/db/academic";
 import {
   Card,
   CardContent,
@@ -9,7 +9,11 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { AnnouncementForm } from "./announcement-form";
-import { AnnouncementDeleteButton } from "./announcement-actions";
+import {
+  AnnouncementDeleteButton,
+  AnnouncementPublishButton,
+  AnnouncementArchiveButton,
+} from "./announcement-actions";
 
 export default async function AnnouncementsPage() {
   const session = await requireRole(["SCHOOL_ADMIN"]);
@@ -27,7 +31,7 @@ export default async function AnnouncementsPage() {
 
   const [classes, announcements] = await Promise.all([
     listClassesOptions(schoolId),
-    getVisibleAnnouncements(schoolId, 50),
+    getAdminAnnouncements(schoolId),
   ]);
 
   return (
@@ -46,7 +50,7 @@ export default async function AnnouncementsPage() {
         {announcements.length === 0 ? (
           <Card>
             <CardContent className="p-8 text-center text-sm text-muted-foreground">
-              Aucune annonce publiée.
+              Aucune annonce.
             </CardContent>
           </Card>
         ) : (
@@ -61,14 +65,42 @@ export default async function AnnouncementsPage() {
                   <Badge variant="secondary">
                     {a.audience === "class" ? "Classe" : "Tous"}
                   </Badge>
+                  {a.published_at ? (
+                    <Badge variant="default">Publiée</Badge>
+                  ) : (
+                    <Badge variant="outline">Brouillon</Badge>
+                  )}
+                  {a.archived_at ? (
+                    <Badge variant="secondary">Archivée</Badge>
+                  ) : null}
                 </div>
-                <AnnouncementDeleteButton
-                  announcementId={a.id}
-                  schoolId={schoolId}
-                />
+                <div className="flex items-center gap-1">
+                  {!a.archived_at ? (
+                    a.published_at ? (
+                      <AnnouncementArchiveButton
+                        announcementId={a.id}
+                        schoolId={schoolId}
+                      />
+                    ) : (
+                      <AnnouncementPublishButton
+                        announcementId={a.id}
+                        schoolId={schoolId}
+                      />
+                    )
+                  ) : null}
+                  <AnnouncementDeleteButton
+                    announcementId={a.id}
+                    schoolId={schoolId}
+                  />
+                </div>
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-muted-foreground">{a.body}</p>
+                {a.classroom_name ? (
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Classe : {a.classroom_name}
+                  </p>
+                ) : null}
                 <p className="mt-2 text-xs text-muted-foreground">
                   {new Date(a.created_at).toLocaleDateString("fr-FR", {
                     day: "numeric",

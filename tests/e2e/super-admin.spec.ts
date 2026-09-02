@@ -23,7 +23,7 @@ test.describe("Super-admin", () => {
     await page.getByLabel(/Nom de l.établissement/).fill("Collège E2E");
     await page.getByLabel(/Code/).fill(code);
     await page.getByRole("button", { name: "Créer", exact: true }).click();
-    await expect(page.getByText("Collège E2E")).toBeVisible();
+    await expect(page.getByText("Collège E2E").first()).toBeVisible();
   });
 
   test("duplicate school code shows an error", async ({ page }) => {

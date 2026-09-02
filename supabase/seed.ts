@@ -433,28 +433,152 @@ async function main() {
   }
   console.log("  Notes créées:", gradesCreated);
 
-  // 11. Annonces
-  const { error: annError } = await supabase.from("announcements").insert([
+  // 11. Annonces (déterministes : publication idempotente par titre)
+  const nowIso = new Date().toISOString();
+  const seedAnnouncements = [
     {
-      school_id: schoolId,
-      author_id: adminId,
-      audience: "all",
       title: "Rentrée scolaire",
       body: "La rentrée aura lieu le 5 septembre à 8h00.",
       important: true,
     },
     {
-      school_id: schoolId,
-      author_id: adminId,
-      audience: "all",
       title: "Réunion parents",
       body: "Réunion des parents le 15 octobre à 17h00.",
       important: false,
     },
-  ]);
-  if (annError) {
-    console.warn("  Annonces non créées (éventuellement en doublon).");
+  ];
+  for (const ann of seedAnnouncements) {
+    const { data: existingAnn } = await supabase
+      .from("announcements")
+      .select("id")
+      .eq("school_id", schoolId)
+      .eq("title", ann.title)
+      .maybeSingle();
+    if (existingAnn) {
+      await supabase
+        .from("announcements")
+        .update({ published_at: nowIso, body: ann.body, important: ann.important })
+        .eq("id", existingAnn.id);
+    } else {
+      await supabase.from("announcements").insert({
+        school_id: schoolId,
+        author_id: adminId,
+        audience: "all",
+        title: ann.title,
+        body: ann.body,
+        important: ann.important,
+        published_at: nowIso,
+      });
+    }
   }
+
+  // 12. Périodes académiques, évaluations et notes structurées (Phase 5)
+  async function ensurePeriod(name: string, type: string, start: string, end: string, isCurrent: boolean) {
+    const { data: existing } = await supabase
+      .from("academic_periods")
+      .select("id")
+      .eq("school_id", schoolId)
+      .eq("name", name)
+      .maybeSingle();
+    if (existing) return existing.id;
+    const { data, error } = await supabase
+      .from("academic_periods")
+      .insert({ school_id: schoolId, academic_year_id: akId, name, type, start_date: start, end_date: end, is_current: isCurrent })
+      .select("id")
+      .single();
+    if (error) throw error;
+    return data.id;
+  }
+
+  const p1Id = await ensurePeriod("Trimestre 1", "trimester", `${year}-09-01`, `${year}-12-20`, true);
+  await ensurePeriod("Trimestre 2", "trimester", `${year}-01-05`, `${year + 1}-03-31`, false);
+
+  let assessmentsCreated = 0;
+  for (const cn of Object.keys(classIdMap)) {
+    const students = studentIdByClass[cn] ?? [];
+    for (const [subjectId, teacherId] of [[maths, t1Id], [french, t1Id]] as const) {
+      let assessment = (
+        await supabase
+          .from("assessments")
+          .select("id")
+          .eq("school_id", schoolId)
+          .eq("class_id", classIdMap[cn])
+          .eq("subject_id", subjectId)
+          .eq("title", "Contrôle n°1")
+          .maybeSingle()
+      ).data;
+      if (!assessment) {
+        const ins = await supabase
+          .from("assessments")
+          .insert({
+            school_id: schoolId,
+            class_id: classIdMap[cn],
+            subject_id: subjectId,
+            teacher_id: teacherId,
+            academic_period_id: p1Id,
+            title: "Contrôle n°1",
+            description: "Premier contrôle de l'année",
+            max_score: 20,
+            coefficient: 1,
+            assessment_date: new Date(today.getTime() - 10 * 864e5).toISOString().slice(0, 10),
+            published: true,
+          })
+          .select("id")
+          .single();
+        if (ins.error ?? !ins.data) continue;
+        assessment = ins.data;
+        assessmentsCreated++;
+      }
+      for (const sid of students.slice(0, 6)) {
+        const score = Math.round((Math.random() * 15 + 5) * 100) / 100;
+        const { error: gErr } = await supabase.from("grades").upsert(
+          {
+            school_id: schoolId,
+            student_id: sid,
+            subject_id: subjectId,
+            classroom_id: classIdMap[cn],
+            teacher_id: teacherId,
+            assessment_id: assessment!.id,
+            title: "Contrôle n°1",
+            score,
+            max_score: 20,
+            coefficient: 1,
+            grade_date: new Date(today.getTime() - 10 * 864e5).toISOString().slice(0, 10),
+            published_at: nowIso,
+          },
+          { onConflict: "assessment_id,student_id" }
+        );
+        if (gErr) {
+          console.warn(`  Note Phase 5 non créée (${cn}/${subjectId}/${sid}): ${gErr.message}`);
+          continue;
+        }
+      }
+      // Une évaluation en brouillon pour illustrer la saisie.
+      const { data: draft } = await supabase
+        .from("assessments")
+        .select("id")
+        .eq("school_id", schoolId)
+        .eq("class_id", classIdMap[cn])
+        .eq("subject_id", subjectId)
+        .eq("title", "Devoir (brouillon)")
+        .maybeSingle();
+      if (!draft) {
+        await supabase.from("assessments").insert({
+          school_id: schoolId,
+          class_id: classIdMap[cn],
+          subject_id: subjectId,
+          teacher_id: teacherId,
+          academic_period_id: p1Id,
+          title: "Devoir (brouillon)",
+          max_score: 20,
+          coefficient: 2,
+          assessment_date: new Date(today.getTime() - 2 * 864e5).toISOString().slice(0, 10),
+          published: false,
+        });
+      }
+    }
+  }
+  console.log("  Évaluations (Phase 5) créées:", assessmentsCreated);
 
   console.log("✅ Seed terminé.");
   console.log("Table de comptes de test documentée dans le README.");
