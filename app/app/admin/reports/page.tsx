@@ -1,10 +1,10 @@
 import { requireRole } from "@/lib/auth/guard";
 import {
-  getSchoolKpis,
   getAttendanceTrend,
   getClassAttendanceRates,
   getSubjectAverages,
   getClassAverages,
+  getSchoolKpis,
 } from "@/lib/db/analytics";
 import {
   Card,
@@ -14,11 +14,17 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { ExportButtons } from "./export-buttons";
 
-export default async function AnalyticsPage() {
+export default async function ReportsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ class?: string; from?: string; to?: string }>;
+}) {
   const session = await requireRole(["SCHOOL_ADMIN"]);
   const schoolId =
     session.memberships.find((m) => m.role === "SCHOOL_ADMIN")?.school_id ?? "";
+  const { class: classFilter, from, to } = await searchParams;
 
   const [kpis, trend, classRates, subjects, classAverages] = await Promise.all([
     getSchoolKpis(schoolId),
@@ -28,44 +34,47 @@ export default async function AnalyticsPage() {
     getClassAverages(schoolId),
   ]);
 
-  const maxDaily = Math.max(1, ...trend.map((t) => t.present + t.absent + t.late + t.excused));
+  const maxDaily = Math.max(1, ...trend.map((t) => t.absent + t.late + t.excused + t.present));
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Analyses</h1>
+        <h1 className="text-2xl font-bold">Rapports</h1>
         <p className="text-muted-foreground">
-          Indicateurs clés, assiduité et performances académiques.
+          Rapports d&apos;assiduité, académiques et statistiques. Exports CSV
+          générés côté serveur.
         </p>
       </div>
 
-      {/* KPI cards */}
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-        <KpiCard label="Élèves actifs" value={String(kpis.student_count)} />
-        <KpiCard label="Classes" value={String(kpis.class_count)} />
-        <KpiCard label="Enseignants" value={String(kpis.teacher_count)} />
-        <KpiCard label="Parents connectés" value={String(kpis.linked_parent_count)} />
-        <KpiCard label="Taux de présence (30j)" value={`${kpis.attendance_rate ?? "—"}%`} />
-        <KpiCard label="Absences (30j)" value={String(kpis.absences)} />
-        <KpiCard label="Retards (30j)" value={String(kpis.lates)} />
-        <KpiCard label="Moyenne générale" value={`${kpis.overall_average ?? "—"} / 100`} />
-      </div>
+      {/* Export toolbar */}
+      <ExportButtons
+        schoolId={schoolId}
+        selectedClass={classFilter ?? ""}
+        from={from ?? ""}
+        to={to ?? ""}
+      />
 
-      {/* Attendance trend */}
+      {/* Attendance report */}
       <Card>
         <CardHeader>
-          <CardTitle>Tendance d&apos;assiduité (30 jours)</CardTitle>
+          <CardTitle>Rapport d&apos;assiduité (30 jours)</CardTitle>
           <CardDescription>
-            Présences (vert), retards (ambre), absences justifiées (bleu), absences (rouge).
+            Présences / absences / retards / absences justifiées.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex h-40 items-end gap-0.5">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <Kpi label="Taux de présence" value={`${kpis.attendance_rate ?? "—"}%`} />
+            <Kpi label="Absences" value={String(kpis.absences)} />
+            <Kpi label="Retards" value={String(kpis.lates)} />
+            <Kpi label="Présences (30j)" value={String(kpis.student_count)} />
+          </div>
+
+          <div className="mt-4 flex h-32 items-end gap-1">
             {trend.map((t) => {
-              const total = t.present + t.absent + t.late + t.excused;
               return (
                 <div key={t.date} className="flex flex-1 flex-col-reverse overflow-hidden rounded-sm"
-                  title={`${t.date} — ${t.present} présents, ${t.absent} absents, ${t.late} retards, ${t.excused} excusés (${total})`}>
+                  title={`${t.date} — ${t.present} présents, ${t.absent} absents, ${t.late} retards, ${t.excused} excusés`}>
                   <div className="w-full bg-emerald-500" style={{ height: `${(t.present / maxDaily) * 100}%` }} />
                   <div className="w-full bg-amber-500" style={{ height: `${(t.late / maxDaily) * 100}%` }} />
                   <div className="w-full bg-sky-500" style={{ height: `${(t.excused / maxDaily) * 100}%` }} />
@@ -74,30 +83,29 @@ export default async function AnalyticsPage() {
               );
             })}
           </div>
-          {trend.length === 0 && (
-            <p className="mt-2 text-sm text-muted-foreground">Aucun relevé d&apos;assiduité sur la période.</p>
-          )}
         </CardContent>
       </Card>
 
+      {/* Academic report */}
       <div className="grid gap-6 lg:grid-cols-2">
-        {/* Subject averages */}
         <Card>
           <CardHeader>
-            <CardTitle>Moyennes par matière</CardTitle>
-            <CardDescription>Normalisées sur 100.</CardDescription>
+            <CardTitle>Rapport académique — par matière</CardTitle>
+            <CardDescription>Moyennes normalisées /100.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             {subjects.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Aucune note enregistrée.</p>
+              <p className="text-sm text-muted-foreground">Aucune note.</p>
             ) : (
               subjects.map((s) => (
                 <div key={s.subjectId}>
                   <div className="mb-1 flex items-center justify-between text-sm">
                     <span className="font-medium">{s.subjectName}</span>
-                    <Badge variant={s.average >= 50 ? "default" : "destructive"}>
-                      {s.average} / 100
-                    </Badge>
+                    <span>
+                      <Badge variant={s.average >= 50 ? "default" : "destructive"}>
+                        {s.average} / 100
+                      </Badge>
+                    </span>
                   </div>
                   <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
                     <div
@@ -111,11 +119,10 @@ export default async function AnalyticsPage() {
           </CardContent>
         </Card>
 
-        {/* Class averages */}
         <Card>
           <CardHeader>
-            <CardTitle>Moyennes par classe</CardTitle>
-            <CardDescription>Normalisées sur 100.</CardDescription>
+            <CardTitle>Rapport académique — par classe</CardTitle>
+            <CardDescription>Effectif, présence, moyenne générale.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             {classAverages.length === 0 ? (
@@ -125,7 +132,9 @@ export default async function AnalyticsPage() {
                 <div key={c.classId}>
                   <div className="mb-1 flex items-center justify-between text-sm">
                     <span className="font-medium">{c.className}</span>
-                    <span className="text-muted-foreground">{c.average} / 100</span>
+                    <span className="text-muted-foreground">
+                      {c.average} / 100
+                    </span>
                   </div>
                   <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
                     <div
@@ -140,7 +149,7 @@ export default async function AnalyticsPage() {
         </Card>
       </div>
 
-      {/* Attendance by class */}
+      {/* Per-class attendance */}
       <Card>
         <CardHeader>
           <CardTitle>Assiduité par classe</CardTitle>
@@ -160,7 +169,11 @@ export default async function AnalyticsPage() {
                 </div>
                 <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
                   <div
-                    className={c.rate >= 80 ? "h-full rounded-full bg-emerald-500" : c.rate >= 60 ? "h-full rounded-full bg-amber-500" : "h-full rounded-full bg-destructive/80"}
+                    className={
+                      c.rate >= 80 ? "h-full rounded-full bg-emerald-500"
+                        : c.rate >= 60 ? "h-full rounded-full bg-amber-500"
+                        : "h-full rounded-full bg-destructive/80"
+                    }
                     style={{ width: `${c.rate}%` }}
                   />
                 </div>
@@ -173,9 +186,9 @@ export default async function AnalyticsPage() {
   );
 }
 
-function KpiCard({ label, value }: { label: string; value: string }) {
+function Kpi({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-lg border p-4">
+    <div className="rounded-lg border p-3">
       <p className="text-xs text-muted-foreground">{label}</p>
       <p className="text-2xl font-bold">{value}</p>
     </div>
