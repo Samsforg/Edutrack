@@ -18,8 +18,12 @@ Pour éviter de dupliquer la logique dans les politiques et pour lire des tables
 sans déclencher de récursion, on utilise des fonctions **SECURITY DEFINER** :
 `is_school_member`, `is_admin_of_school`, `is_super_admin`, `parent_of_student`,
 `is_school_non_parent_member`, `is_school_parent_member`,
-`staff_can_notify_parent`, et les RPC `resolve_link_code`,
-`create_link_request`, `set_link_request_status`.
+`staff_can_notify_parent`.
+
+Les RPC de liaison (`verify_link_code`, `create_link_request`,
+`resolve_link_request`, `attempt_slowdown`) sont elles aussi `security definer`
+`set search_path = public, pg_temp` et **schema-qualifient** les appels
+(`public.*`, `extensions.digest`) pour se prémunir des collisions de `search_path`.
 
 > ⚠️ Une fonction `security definer` lit les tables **sans** leurs politiques RLS.
 > C'est volontaire pour la vérification d'autorisation, mais elle doit être
@@ -39,6 +43,33 @@ sans déclencher de récursion, on utilise des fonctions **SECURITY DEFINER** :
 | Un admin modifie une **autre** école                  | bloqué   |
 | Un enseignant crée une annonce / gère des membres     | bloqué   |
 | Un super-admin voit toutes les écoles / élèves        | autorisé |
+
+## Liaison parent-élève par code (migration 0011)
+
+Le flux de liaison (code → demande → approbation) est conçu pour ne jamais
+exposer un identifiant scolaire brute.
+
+- **Hash, jamais de clair** : `students.link_code` a été supprimé. Un code est
+  stocké dans `student_link_codes` sous la forme `code_salt` (aléatoire, 16
+  octets) + `code_hash = sha256(code_salt || code_normalisé)`. L'égalité est
+  indexable en SQL pur. Un parent ne peut jamais lire `student_link_codes`
+  (RLS réservée à l'admin/super-admin).
+- **Chiffre aléatoire** : format `EDU-XXXX-XXXX`, alphabet de 32 caractères sans
+  biais de modulo (~80 bits d'entropie).
+- **Garanties du code** : expiration 7 jours (`expires_at`), usage unique
+  (`used_at`), révocation (`revoked_at`) ; index unique partiel `uq_link_codes_active_student`
+  (un seul code actif par élève).
+- **Rate limiting** : `link_code_attempts` + `attempt_slowdown()` (~10 essais /
+  5 min), table RLS activée **sans** politique (seul un definer écrit).
+- **Aucune fuite d'identifiant** : `verify_link_code` retourne uniquement
+  prénom/nom/école ; ni matricule (`matricule`) ni `classroom_id`.
+- **Approbation réservée au staff** : `student_link_requests` a une politique
+  `link_requests_update_admin_only` — un parent ne peut **pas** basculer sa
+  propre demande en `approved` (testé). Il ne peut annuler que sa demande
+  `pending`.
+- **Isolation stricte** : les politiques de `student_link_requests` restreignent
+  la lecture à `parents.user_id = auth.uid()` (même école) et l'administration
+  à l'admin de l'école ; un admin d'une autre école ne voit ni ne traite rien.
 
 ## Politiques ajoutées par la 0009 / 0010 (gestion d'établissement)
 
@@ -73,6 +104,12 @@ enseignant, élève, parent).
 4. **Notifications** (migration `0007`) : `notifications_own` empêchait le staff
    de notifier les parents (`42501`). Ajout d'une policy d'insertion via
    `staff_can_notify_parent`.
+5. **Code en clair** (migration `0011`) : le code de liaison était stocké en
+   clair dans `students.link_code` et renvoyé par RPC. Remplacé par un hash
+   salé dans `student_link_codes` et une confirmation minimale (`verify_link_code`).
+6. **Approbation parent** (migration `0011`) : un parent aurait pu forcer
+   `status = approved` via UPDATE RLS. Réservé au staff
+   (`link_requests_update_admin_only`).
 
 ## Recommandations
 

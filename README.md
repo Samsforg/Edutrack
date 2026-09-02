@@ -18,11 +18,11 @@ base de données, ni utilisateurs, ni dépendance technique avec Edukora.
 
 ## Fonctionnalités
 
-- **Espace parent** : enfants liés, présences en direct, moyennes, notifications Realtime.
+- **Espace parent** : portail dédié — dashboard « Bonjour », enfants liés, détail enfant protégé par RLS, liaison par code en 2 étapes.
 - **Espace enseignant** : prise d'appel par classe, saisie des notes.
 - **Espace admin école** : gestion élèves (statuts), enseignants (activation), classes (année scolaire), matières (codes uniques), années scolaires (1 seule courante), répertoire parents, paramètres de l'établissement, annonces, approbation des liaisons parent-enfant, import CSV, analytique.
 - **Espace super-admin** : vue plateforme, création d'établissements.
-- **Liaison parent-enfant par code** : l'école affiche un code, le parent le saisit, l'admin approuve.
+- **Liaison parent-enfant par code sécurisée** : codes hachés (SHA-256 salé, jamais en clair), expiration 7 j, usage unique, révocation, rate limiting, demande → approbation/rejet par l'école.
 - **Sécurité multi-tenant** : Row Level Security (PostgreSQL), isolation stricte des données par école et par rôle.
 
 ## Stack
@@ -152,6 +152,8 @@ build à chaque push/PR.
 - [Architecture](docs/ARCHITECTURE.md)
 - [Base de données](docs/DATABASE.md)
 - [Sécurité](docs/SECURITY.md)
+- [Authentification & autorisation](docs/AUTH.md)
+- [Liaison parent-élève par code](docs/PARENT_LINKING.md)
 - [Déploiement](docs/DEPLOYMENT.md)
 - [Produit & MVP](docs/PRODUCT.md)
 
