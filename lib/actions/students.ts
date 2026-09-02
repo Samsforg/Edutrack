@@ -4,7 +4,6 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { getSession } from "@/lib/auth/session";
-import { generateLinkCode } from "@/lib/link-codes";
 import type { StudentStatus } from "@/types/enums";
 
 const studentSchema = z.object({
@@ -47,7 +46,6 @@ export async function createStudent(
     school_id: d.schoolId,
     classroom_id: d.classroomId || null,
     matricule: d.matricule,
-    link_code: generateLinkCode(),
     first_name: d.firstName,
     last_name: d.lastName,
     birth_date: d.birthDate || null,

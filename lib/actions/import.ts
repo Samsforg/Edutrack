@@ -4,7 +4,6 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { getSession } from "@/lib/auth/session";
-import { generateLinkCode } from "@/lib/link-codes";
 
 const rowsSchema = z.array(
   z.object({
@@ -80,7 +79,6 @@ export async function importStudents(
   const toInsert: {
     school_id: string;
     matricule: string;
-    link_code: string;
     first_name: string;
     last_name: string;
     classroom_id: string | null;
@@ -98,7 +96,6 @@ export async function importStudents(
     toInsert.push({
       school_id: schoolId,
       matricule: key,
-      link_code: generateLinkCode(),
       first_name: r.firstName.trim(),
       last_name: r.lastName.trim(),
       classroom_id: r.className?.trim()

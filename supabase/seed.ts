@@ -298,7 +298,6 @@ async function main() {
           classroom_id: classId,
           academic_year_id: akId,
           matricule,
-          link_code: `EDU-${Math.random().toString(36).slice(2, 6).toUpperCase()}-${Math.random().toString(36).slice(2, 4).toUpperCase()}`,
           first_name: firstName,
           last_name: lastName,
         })

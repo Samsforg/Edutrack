@@ -246,7 +246,6 @@ export interface Database {
           classroom_id: string | null;
           academic_year_id: string | null;
           matricule: string;
-          link_code: string | null;
           first_name: string;
           last_name: string;
           birth_date: string | null;
@@ -262,7 +261,6 @@ export interface Database {
           classroom_id?: string | null;
           academic_year_id?: string | null;
           matricule: string;
-          link_code?: string | null;
           first_name: string;
           last_name: string;
           birth_date?: string | null;
@@ -276,7 +274,6 @@ export interface Database {
           classroom_id?: string | null;
           academic_year_id?: string | null;
           matricule?: string;
-          link_code?: string | null;
           first_name?: string;
           last_name?: string;
           birth_date?: string | null;
@@ -492,9 +489,12 @@ export interface Database {
           school_id: string;
           parent_id: string | null;
           student_id: string;
-          code: string;
+          link_code_id: string | null;
           status: LinkRequestStatus;
           expires_at: string;
+          resolved_by: string | null;
+          resolved_at: string | null;
+          reason: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -503,18 +503,81 @@ export interface Database {
           school_id: string;
           parent_id?: string | null;
           student_id: string;
-          code: string;
+          link_code_id?: string | null;
           status?: LinkRequestStatus;
           expires_at: string;
+          resolved_by?: string | null;
+          resolved_at?: string | null;
+          reason?: string | null;
         };
         Update: {
           id?: string;
           school_id?: string;
           parent_id?: string | null;
           student_id?: string;
-          code?: string;
+          link_code_id?: string | null;
           status?: LinkRequestStatus;
           expires_at?: string;
+          resolved_by?: string | null;
+          resolved_at?: string | null;
+          reason?: string | null;
+        };
+      };
+      student_link_codes: {
+        Row: {
+          id: string;
+          school_id: string;
+          student_id: string;
+          code_salt: string;
+          code_hash: string;
+          expires_at: string;
+          revoked_at: string | null;
+          revoke_reason: string | null;
+          used_at: string | null;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          school_id: string;
+          student_id: string;
+          code_salt: string;
+          code_hash: string;
+          expires_at: string;
+          revoked_at?: string | null;
+          revoke_reason?: string | null;
+          used_at?: string | null;
+          created_by?: string | null;
+        };
+        Update: {
+          id?: string;
+          school_id?: string;
+          student_id?: string;
+          code_salt?: string;
+          code_hash?: string;
+          expires_at?: string;
+          revoked_at?: string | null;
+          revoke_reason?: string | null;
+          used_at?: string | null;
+          created_by?: string | null;
+        };
+      };
+      link_code_attempts: {
+        Row: {
+          id: string;
+          user_id: string;
+          attempted_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          attempted_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          attempted_at?: string;
         };
       };
     };
