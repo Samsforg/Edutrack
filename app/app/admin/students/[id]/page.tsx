@@ -7,6 +7,17 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StudentLinkCodeCard } from "../student-link-code-card";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
+import {
+  getStudentAttendanceSummary,
+  getStudentsAttendanceHistory,
+} from "@/lib/db/attendance-history";
+
+const ATT_STATUS: Record<string, { label: string; cls: string }> = {
+  present: { label: "Présent", cls: "bg-emerald-100 text-emerald-700" },
+  absent: { label: "Absent", cls: "bg-red-100 text-red-700" },
+  late: { label: "Retard", cls: "bg-amber-100 text-amber-700" },
+  excused: { label: "Excusé", cls: "bg-sky-100 text-sky-700" },
+};
 
 const statusLabels: Record<string, string> = {
   active: "Actif",
@@ -34,6 +45,15 @@ export default async function StudentDetailPage({
   ]);
 
   if (!student) return notFound();
+
+  const to = new Date().toISOString().slice(0, 10);
+  const fromDate = new Date(`${to}T00:00:00`);
+  fromDate.setDate(fromDate.getDate() - 89);
+  const from = fromDate.toISOString().slice(0, 10);
+  const [summary, recent] = await Promise.all([
+    getStudentAttendanceSummary(id, from, to),
+    getStudentsAttendanceHistory([id], from, to),
+  ]);
 
   return (
     <div className="space-y-6">
@@ -125,6 +145,42 @@ export default async function StudentDetailPage({
 
       <Card>
         <CardHeader>
+          <CardTitle>Présence (90 derniers jours)</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+            <Stat label="Taux" value={summary.rate == null ? "—" : `${summary.rate}%`} />
+            <Stat label="Jours relevés" value={String(summary.total)} />
+            <Stat label="Présent" value={String(summary.present)} />
+            <Stat label="Retard" value={String(summary.late)} />
+            <Stat label="Absent + Excusé" value={String(summary.absent + summary.excused)} />
+          </div>
+          {recent.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Aucune présence enregistrée.</p>
+          ) : (
+            <div className="divide-y">
+              {recent.slice(0, 10).map((r) => (
+                <div
+                  key={r.id}
+                  className="flex items-center justify-between py-1.5 text-sm"
+                >
+                  <span className="text-muted-foreground">
+                    {format(new Date(`${r.attendance_date}T00:00:00`), "dd/MM/yyyy", {
+                      locale: fr,
+                    })}
+                  </span>
+                  <Badge variant="secondary" className={ATT_STATUS[r.status]?.cls}>
+                    {ATT_STATUS[r.status]?.label ?? r.status}
+                  </Badge>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
           <CardTitle>Liaison parent</CardTitle>
         </CardHeader>
         <CardContent>
@@ -158,6 +214,15 @@ export default async function StudentDetailPage({
           )}
         </CardContent>
       </Card>
+    </div>
+  );
+}
+
+function Stat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-lg border p-3 text-center">
+      <p className="text-xl font-bold">{value}</p>
+      <p className="text-xs text-muted-foreground">{label}</p>
     </div>
   );
 }

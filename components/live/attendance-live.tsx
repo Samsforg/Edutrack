@@ -43,49 +43,59 @@ export function AttendanceLive({ studentId, studentName }: Props) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let active = true;
+    let channel: ReturnType<ReturnType<typeof createClient>["channel"]> | null = null;
+
     const supabase = createClient();
     const today = todayISO();
 
-    let active = true;
+    // Open the Realtime channel only once the session token is attached, so
+    // RLS-scoped postgres_changes events reach the browser. Subscribing before
+    // auth resolves connects anonymously and silently drops events.
+    void supabase.auth.getSession().then(({ data: session }) => {
+      if (!active || !session.session) return;
 
-    supabase
-      .from("attendance")
-      .select("status")
-      .eq("student_id", studentId)
-      .eq("attendance_date", today)
-      .maybeSingle()
-      .then(({ data }) => {
-        if (active) {
-          setStatus(data?.status ?? null);
-          setLoading(false);
-        }
-      });
-
-    const channel = supabase
-      .channel(`attendance-${studentId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "attendance",
-          filter: `student_id=eq.${studentId}`,
-        },
-        (payload) => {
-          const row = payload.new as { status: AttendanceStatus; attendance_date: string } | null;
-          if (row?.attendance_date === today) {
-            setStatus(row.status);
-          } else if (payload.eventType === "UPDATE") {
-            const old = payload.old as { attendance_date?: string } | null;
-            if (old?.attendance_date === today) setStatus(null);
+      supabase
+        .from("attendance")
+        .select("status")
+        .eq("student_id", studentId)
+        .eq("attendance_date", today)
+        .maybeSingle()
+        .then(({ data }) => {
+          if (active) {
+            setStatus(data?.status ?? null);
+            setLoading(false);
           }
-        }
-      )
-      .subscribe();
+        });
+
+      channel = supabase.channel(`attendance-${studentId}`);
+      channel
+        .on(
+          "postgres_changes",
+          {
+            event: "*",
+            schema: "public",
+            table: "attendance",
+            filter: `student_id=eq.${studentId}`,
+          },
+          (payload) => {
+            const row = payload.new as
+              | { status: AttendanceStatus; attendance_date: string }
+              | null;
+            if (row?.attendance_date === today) {
+              setStatus(row.status);
+            } else if (payload.eventType === "UPDATE") {
+              const old = payload.old as { attendance_date?: string } | null;
+              if (old?.attendance_date === today) setStatus(null);
+            }
+          }
+        )
+        .subscribe();
+    });
 
     return () => {
       active = false;
-      supabase.removeChannel(channel);
+      if (channel) supabase.removeChannel(channel);
     };
   }, [studentId]);
 

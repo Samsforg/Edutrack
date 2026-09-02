@@ -21,6 +21,7 @@ dashboard Supabase).
 | `20250401000010_school_admin_update_policy.sql` | un `SCHOOL_ADMIN` peut mettre à jour sa propre école (contacts) |
 | `20250401000011_secure_parent_linking.sql` | **Liaison sécurisée** : table `student_link_codes` (hash SHA-256 salé, jamais en clair), rate limiting `link_code_attempts` + `attempt_slowdown`, RPC `verify_link_code` / `create_link_request` / `resolve_link_request`, évolution `student_link_requests` (drop `code`, ajout `link_code_id`, `resolved_by/at`, `reason`), politiques RLS strictes |
 | `20250401000012_drop_students_link_code.sql` | suppression de la colonne obsolète `students.link_code` |
+| `20250401000013_attendance_live_and_realtime.sql` | **Présence (Phase 4)** : colonnes `attendance.check_in/check_out/updated_by`, trigger inter-écoles `assert_attendance_same_school`, index `(classroom_id, attendance_date)` + `(student_id, attendance_date)`, **Realtime** : tables `attendance` + `notifications` ajoutées à la publication `supabase_realtime` |
 
 > Les migrations sont **dans l'ordre** : certaines fonctions SQL sont validées à
 > la création et exigent que les tables existent (table → helpers → rls).
@@ -66,6 +67,26 @@ référencer un enregistrement d'une autre école :
 
 Ces triggers complètent la RLS (prévention des incohérences défensives pour le
 code privilégié tel que le service role).
+
+## Prise de présence (0013)
+
+- **Colonnes** : `attendance.check_in`, `attendance.check_out` (horaires
+  facultatifs — pertinents pour les retards), `attendance.updated_by`
+  (utilisateur de la dernière modification, complète l'audit `taken_by`).
+- **Trigger `assert_attendance_same_school`** (`before insert or update`,
+  `security definer` en `search_path = public`) : l'école et la classe du
+  relevé doivent correspondre à celles de l'élève. Empêche toute écriture
+  cross-école même via le service role.
+- **Index** : `(classroom_id, attendance_date)` et `(student_id, attendance_date)`
+  pour l'appel du jour d'une classe et l'historique/les stats d'un élève.
+- Contrainte `UNIQUE(student_id, attendance_date)` (héritée) : un seul relevé
+  par élève et par jour ; les appels sont **idempotents** (`ON CONFLICT`).
+
+## Realtime (0013)
+
+La publication `supabase_realtime` contient désormais `attendance` et
+`notifications`. Les souscriptions client utilisent `postgres_changes` avec un
+filtre par abonné ; la RLS filtre les événements (aucun Realtime public).
 
 ## RPC (flux de liaison)
 

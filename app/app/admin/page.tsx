@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { requireRole } from "@/lib/auth/guard";
 import { getAdminStats } from "@/lib/db/admin";
+import { getSchoolTodayAttendance } from "@/lib/db/attendance-history";
+import { Badge } from "@/components/ui/badge";
 import {
   Card,
   CardContent,
@@ -30,6 +32,10 @@ export default async function AdminDashboardPage() {
   }
 
   const stats = await getAdminStats(schoolId);
+  const today = new Date().toISOString().slice(0, 10);
+  const todayRows = await getSchoolTodayAttendance(schoolId, today);
+  const absents = todayRows.filter((r) => r.status === "absent");
+  const unmarked = todayRows.filter((r) => r.status == null);
 
   const quickActions = [
     { href: "/app/admin/students", label: "Élèves" },
@@ -111,6 +117,59 @@ export default async function AdminDashboardPage() {
           </div>
         </CardContent>
       </Card>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>Absents aujourd&apos;hui</CardTitle>
+            <CardDescription>
+              {absents.length === 0
+                ? "Aucun élève absent enregistré aujourd&apos;hui."
+                : `${absents.length} élève${absents.length > 1 ? "s" : ""} absent${absents.length > 1 ? "s" : ""}.`}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {absents.length === 0 ? null : (
+              <div className="divide-y">
+                {absents.slice(0, 10).map((r) => (
+                  <div key={r.student_id} className="flex items-center justify-between py-1.5 text-sm">
+                    <span className="font-medium">{r.student_name}</span>
+                    <span className="text-xs text-muted-foreground">{r.matricule}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Présences non enregistrées</CardTitle>
+            <CardDescription>
+              {unmarked.length === 0
+                ? "Tous les élèves actifs ont été pointés."
+                : `${unmarked.length} élève${unmarked.length > 1 ? "s" : ""} encore non pointé${unmarked.length > 1 ? "s" : ""} aujourd&apos;hui.`}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {unmarked.length === 0 ? null : (
+              <div className="max-h-56 space-y-1 overflow-auto">
+                {unmarked.slice(0, 10).map((r) => (
+                  <div key={r.student_id} className="flex items-center justify-between py-1 text-sm">
+                    <span className="font-medium">{r.student_name}</span>
+                    <Badge variant="outline">Non pointé</Badge>
+                  </div>
+                ))}
+                {unmarked.length > 10 ? (
+                  <p className="pt-1 text-xs text-muted-foreground">
+                    …et {unmarked.length - 10} autre{unmarked.length - 10 > 1 ? "s" : ""}.
+                  </p>
+                ) : null}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
         {quickActions.map((a) => (

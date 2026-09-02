@@ -38,8 +38,16 @@ const adminNav = [
 const parentNav = [
   { href: "/app/parent", label: "Tableau de bord" },
   { href: "/app/parent/children", label: "Mes enfants" },
+  { href: "/app/parent/notifications", label: "Notifications" },
   { href: "/app/parent/link", label: "Lier un enfant" },
   { href: "/app/parent/link-requests", label: "Mes demandes" },
+];
+
+const teacherNav = [
+  { href: "/app/teacher", label: "Tableau de bord" },
+  { href: "/app/teacher/attendance", label: "Faire l'appel" },
+  { href: "/app/teacher/attendance/history", label: "Historique" },
+  { href: "/app/teacher/grades", label: "Notes" },
 ];
 
 export function AppShell({ user, memberships, homePath, children }: AppShellProps) {
@@ -47,6 +55,9 @@ export function AppShell({ user, memberships, homePath, children }: AppShellProp
   const isAdmin = memberships.some((m) => m.role === "SCHOOL_ADMIN");
   const isParent = memberships.some(
     (m) => m.role === "PARENT" && pathname.startsWith("/app/parent")
+  );
+  const isTeacher = memberships.some(
+    (m) => m.role === "TEACHER" && pathname.startsWith("/app/teacher")
   );
 
   return (
@@ -130,6 +141,32 @@ export function AppShell({ user, memberships, homePath, children }: AppShellProp
                 const active =
                   item.href === "/app/parent"
                     ? pathname === "/app/parent"
+                    : pathname.startsWith(item.href);
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={`whitespace-nowrap rounded-md px-3 py-1.5 text-sm transition-colors ${
+                      active
+                        ? "bg-primary text-primary-foreground"
+                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                    }`}
+                  >
+                    {item.label}
+                  </Link>
+                );
+              })}
+            </div>
+          </nav>
+        ) : null}
+        {isTeacher ? (
+          <nav className="border-t">
+            <div className="mx-auto flex w-full max-w-6xl items-center gap-1 overflow-x-auto px-4 py-1">
+              {teacherNav.map((item) => {
+                const active =
+                  item.href === "/app/teacher"
+                    ? pathname === "/app/teacher" ||
+                      pathname.startsWith("/app/teacher/attendance")
                     : pathname.startsWith(item.href);
                 return (
                   <Link

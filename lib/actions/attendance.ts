@@ -5,13 +5,19 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { getSession } from "@/lib/auth/session";
 import { ATTENDANCE_STATUSES } from "@/types/enums";
-import {
-  getParentUserIdsForStudents,
-  insertNotifications,
-} from "@/lib/db/notify";
+import type { AttendanceStatus } from "@/types/enums";
+import { getParentUserIdsForStudents } from "@/lib/db/notify";
 
+/**
+ * One status per student. `date` defaults to today (server-side).
+ * `checkIn`, `checkOut`, `note` are optional per student (keyed by student id).
+ */
 const attendanceSchema = z.object({
   classId: z.string().uuid(),
+  date: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Date invalide")
+    .optional(),
   entries: z
     .array(
       z.object({
@@ -20,6 +26,14 @@ const attendanceSchema = z.object({
       })
     )
     .min(1, "Au moins un élève est requis"),
+  checkIns: z.record(z.string().uuid(), z.string()).optional(),
+  checkOuts: z.record(z.string().uuid(), z.string()).optional(),
+  notes: z
+    .record(
+      z.string().uuid(),
+      z.string().max(255, "Note trop longue (255 caractères max)")
+    )
+    .optional(),
 });
 
 export type SaveAttendanceResult =
@@ -27,10 +41,14 @@ export type SaveAttendanceResult =
   | { ok: true; saved: number };
 
 /**
- * Batch-saves today's attendance for a class in a single operation.
- * School id is resolved from the server-side session, never trusted
- * from the client. Only teachers assigned to the class or admins may
- * write (enforced by RLS + the check below).
+ * Batch-saves attendance for a class on a date in a single operation.
+ * - The school id is resolved from the server-side session, never the client.
+ * - Only teachers assigned to the class (via class_subjects) or school admins
+ *   may write (enforced by RLS `attendance_write` + the checks below).
+ * - `ON CONFLICT(student_id, attendance_date)` makes the operation idempotent:
+ *   a second save updates the existing row instead of creating a duplicate.
+ * - Per-student notifications (Absence / Retard / Absence excusée) are created
+ *   for the linked parents when the status differs from what we care about.
  */
 export async function saveAttendance(
   input: z.infer<typeof attendanceSchema>
@@ -45,16 +63,19 @@ export async function saveAttendance(
     return { error: "Non authentifié" };
   }
 
+  const d = parsed.data;
+  const date = d.date ?? new Date().toISOString().slice(0, 10);
+
   const supabase = await createClient();
 
   // Load the class + school id server-side.
-  const { data: cls } = await supabase
+  const { data: cls, error: clsErr } = await supabase
     .from("classes")
     .select("id, school_id")
-    .eq("id", parsed.data.classId)
+    .eq("id", d.classId)
     .maybeSingle();
 
-  if (!cls) {
+  if (clsErr || !cls) {
     return { error: "Classe introuvable" };
   }
 
@@ -65,66 +86,131 @@ export async function saveAttendance(
   if (!membership || !["SCHOOL_ADMIN", "TEACHER"].includes(membership.role)) {
     return { error: "Accès refusé" };
   }
+  // A teacher can only take attendance for classes they teach.
+  if (membership.role === "TEACHER") {
+    const teacherIds =
+      session.memberships
+        .filter(
+          (m) =>
+            m.school_id === cls.school_id && m.role === "TEACHER"
+        )
+        .length > 0
+        ? await getTeacherIdsForUser(supabase, session.user.id, cls.school_id)
+        : [];
+    if (teacherIds.length === 0) {
+      return { error: "Accès refusé : classe non affectée" };
+    }
+    const { count } = await supabase
+      .from("class_subjects")
+      .select("*", { count: "exact", head: true })
+      .eq("class_id", d.classId)
+      .in("teacher_id", teacherIds);
+    if ((count ?? 0) === 0) {
+      return { error: "Accès refusé : classe non affectée" };
+    }
+  }
 
-  const today = new Date().toISOString().slice(0, 10);
-
-  // Load students of the class to map id + verify they belong.
+  // Load students of the class to map + verify they belong and get names.
   const { data: students } = await supabase
     .from("students")
-    .select("id, school_id")
-    .in(
-      "id",
-      parsed.data.entries.map((e) => e.studentId)
-    );
+    .select("id, first_name, last_name")
+    .eq("classroom_id", d.classId);
 
-  const valid = new Set(students?.map((s) => s.id) ?? []);
-  const rows = parsed.data.entries
-    .filter((e) => valid.has(e.studentId))
+  const byId = new Map((students ?? []).map((s) => [s.id, s]));
+  const rows = d.entries
+    .filter((e) => byId.has(e.studentId))
     .map((e) => ({
       school_id: cls.school_id,
       student_id: e.studentId,
       classroom_id: cls.id,
-      attendance_date: today,
+      attendance_date: date,
       status: e.status,
       taken_by: session.user.id,
+      updated_by: session.user.id,
+      check_in: d.checkIns?.[e.studentId] ?? null,
+      check_out: d.checkOuts?.[e.studentId] ?? null,
+      note: d.notes?.[e.studentId] ?? null,
     }));
 
   if (rows.length === 0) {
     return { error: "Aucun élève valide" };
   }
 
-  // Upsert is safe given the unique (student_id, attendance_date) constraint.
-  const { error } = await supabase
+  // Atomic upsert: all rows succeed or none is persisted.
+  const { error: saveErr } = await supabase
     .from("attendance")
     .upsert(rows, { onConflict: "student_id,attendance_date" });
 
-  if (error) {
-    return { error: error.message };
+  if (saveErr) {
+    return { error: saveErr.message };
   }
 
-  // Notify linked parents about non-present students.
+  // Per-student notifications to linked parents for non-present statuses.
   const flagged = rows.filter((r) => r.status !== "present");
   if (flagged.length > 0) {
     const parentIds = await getParentUserIdsForStudents(
       flagged.map((r) => r.student_id)
     );
-    const statusLabel =
-      flagged[0]?.status === "absent"
-        ? "Absence"
-        : flagged[0]?.status === "late"
-          ? "Retard"
-          : "Absence excusée";
-    await insertNotifications(parentIds, {
-      type: "attendance",
-      title: statusLabel,
-      body: `Signature de présence enregistrée (${statusLabel.toLowerCase()}).`,
-      link: "/app/parent",
-    });
+    const statusToTitle: Record<AttendanceStatus, string> = {
+      absent: "Absence",
+      late: "Retard",
+      excused: "Absence excusée",
+      present: "",
+    };
+    const notifRows: {
+      user_id: string;
+      type: "attendance";
+      title: string;
+      body: string | null;
+      link: string;
+    }[] = [];
+    for (const pid of parentIds) {
+      for (const r of flagged) {
+        const student = byId.get(r.student_id);
+        const fullName = student
+          ? `${student.first_name} ${student.last_name}`
+          : "votre enfant";
+        const title = statusToTitle[r.status];
+        notifRows.push({
+          user_id: pid,
+          type: "attendance",
+          title,
+          body: `Votre enfant ${fullName} est marqué ${
+            r.status === "late"
+              ? "en retard"
+              : r.status === "excused"
+                ? "excusé"
+                : "absent"
+          } aujourd'hui.`,
+          link: "/app/parent",
+        });
+      }
+    }
+    if (notifRows.length > 0) {
+      await supabase.from("notifications").insert(notifRows);
+    }
   }
 
   revalidatePath("/app/parent");
   revalidatePath("/app/teacher");
   revalidatePath("/app/admin");
+  revalidatePath("/app/parent/children");
 
   return { ok: true, saved: rows.length };
+}
+
+/**
+ * Returns the teacher row ids for a user (used to scope class_subjects checks).
+ */
+async function getTeacherIdsForUser(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string,
+  schoolId: string
+): Promise<string[]> {
+  const { data } = await supabase
+    .from("teachers")
+    .select("id")
+    .eq("user_id", userId)
+    .eq("school_id", schoolId);
+  return (data ?? []).map((t) => t.id);
 }

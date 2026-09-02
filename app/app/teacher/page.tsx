@@ -9,10 +9,17 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { hasClassAttendance } from "@/lib/db/attendance-history";
 
 export default async function TeacherDashboardPage() {
   const session = await requireRole(["TEACHER"]);
   const classes = await getTeacherClasses(session.user.id);
+  const today = new Date().toISOString().slice(0, 10);
+  const called: Record<string, boolean> = {};
+  for (const c of classes) {
+    called[c.class_id] = await hasClassAttendance(c.class_id, today);
+  }
 
   return (
     <div className="space-y-6">
@@ -38,7 +45,12 @@ export default async function TeacherDashboardPage() {
           {classes.map((c) => (
             <Card key={c.class_id}>
               <CardHeader>
-                <CardTitle>{c.class_name}</CardTitle>
+                <div className="flex items-center justify-between gap-2">
+                  <CardTitle>{c.class_name}</CardTitle>
+                  <Badge variant={called[c.class_id] ? "default" : "outline"}>
+                    {called[c.class_id] ? "Appel effectué" : "Appel à faire"}
+                  </Badge>
+                </div>
                 <CardDescription>
                   {c.subjects.map((s) => s.subject_name).join(", ")}
                 </CardDescription>

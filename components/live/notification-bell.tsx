@@ -44,51 +44,59 @@ export function NotificationBell({ userId }: { userId: string }) {
     const supabase = createClient();
 
     let active = true;
-    void supabase
-      .from("notifications")
-      .select("id, type, title, body, link, read_at, created_at")
-      .eq("user_id", userId)
-      .order("created_at", { ascending: false })
-      .limit(10)
-      .then(({ data }) => {
-        if (!active) return;
-        const rows = (data ?? []) as RealtimeNotification[];
-        setItems(rows);
-        setUnread(rows.filter((n) => !n.read_at).length);
-      });
+    let channel: ReturnType<ReturnType<typeof createClient>["channel"]> | null = null;
 
-    const channel = supabase
-      .channel(`notifications-${userId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "notifications",
-          filter: `user_id=eq.${userId}`,
-        },
-        (payload) => {
+    // Wait for the session token before subscribing so RLS-scoped
+    // postgres_changes events actually reach the browser.
+    void supabase.auth.getSession().then(({ data: session }) => {
+      if (!active || !session.session) return;
+
+      void supabase
+        .from("notifications")
+        .select("id, type, title, body, link, read_at, created_at")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false })
+        .limit(10)
+        .then(({ data }) => {
           if (!active) return;
-          const row = payload.new as RealtimeNotification | null;
-          if (payload.eventType === "INSERT" && row) {
-            setItems((prev) => [row, ...prev].slice(0, 10));
-            setUnread((u) => u + 1);
-          } else if (payload.eventType === "UPDATE" && row) {
-            setItems((prev) =>
-              prev.map((n) => (n.id === row.id ? row : n))
-            );
-            const old = payload.old as { read_at?: string | null } | null;
-            if (old?.read_at == null && row.read_at != null) {
-              setUnread((u) => Math.max(0, u - 1));
+          const rows = (data ?? []) as RealtimeNotification[];
+          setItems(rows);
+          setUnread(rows.filter((n) => !n.read_at).length);
+        });
+
+      channel = supabase
+        .channel(`notifications-${userId}`)
+        .on(
+          "postgres_changes",
+          {
+            event: "*",
+            schema: "public",
+            table: "notifications",
+            filter: `user_id=eq.${userId}`,
+          },
+          (payload) => {
+            if (!active) return;
+            const row = payload.new as RealtimeNotification | null;
+            if (payload.eventType === "INSERT" && row) {
+              setItems((prev) => [row, ...prev].slice(0, 10));
+              setUnread((u) => u + 1);
+            } else if (payload.eventType === "UPDATE" && row) {
+              setItems((prev) =>
+                prev.map((n) => (n.id === row.id ? row : n))
+              );
+              const old = payload.old as { read_at?: string | null } | null;
+              if (old?.read_at == null && row.read_at != null) {
+                setUnread((u) => Math.max(0, u - 1));
+              }
             }
           }
-        }
-      )
-      .subscribe();
+        )
+        .subscribe();
+    });
 
     return () => {
       active = false;
-      supabase.removeChannel(channel);
+      if (channel) supabase.removeChannel(channel);
     };
   }, [userId]);
 

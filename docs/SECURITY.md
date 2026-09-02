@@ -90,6 +90,32 @@ class_subjects, students, student_parents) qui **rejettent** toute écriture
 référençant un enregistrement d'une autre école (classe, année, matière,
 enseignant, élève, parent).
 
+## Présence & notifications (Phase 4, migration 0013)
+
+- **Trigger `assert_attendance_same_school`** : tout relevé dont l'école ou la
+  classe diffère de celle de l'élève est **rejeté**, y compris via le service
+  role (défense en profondeur au-delà de la RLS).
+- **RLS `attendance`** : SELECT = super-admin / parent de l'élève / membre non
+  parent de l'école ; écriture (`attendance_write`) = admin de l'école de
+  l'élève ou enseignant affecté. Un parent est strictement en lecture seule.
+- **RLS `notifications`** : `notifications_own` confine à `user_id = auth.uid()`
+  ; l'insertion est réservée au staff de la même école (`staff_can_notify_parent`).
+  Une autre école ne peut pas notifier un parent étranger.
+- **Realtime sécurisé** : les souscriptions `postgres_changes` sont filtrées et
+  RLS-scopées ; aucun canal public. La publication `supabase_realtime` ne couvre
+  que `attendance` et `notifications`.
+
+Vérification automatisée sur le backend réel (14 assertions) :
+
+```bash
+npx tsx scripts/attendance-security-check.ts
+```
+
+Entre autres : un parent lié lit son enfant (R1), un tiers et un parent d'une
+autre école ne lisent ni n'écrivent (R2/R5/R6/R7), un parent n'écrit ni ne
+supprime (R3/R12), l'admin écrit (R4), le trigger refuse une école étrangère
+(R8), les notifications sont scopées/non falsifiables (R9-R11).
+
 ## Fuites corrigées pendant le développement
 
 1. **`parent_of_student`** (migration `0006`) : initialement scopé à l'école, il

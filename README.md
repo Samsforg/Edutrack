@@ -19,11 +19,13 @@ base de données, ni utilisateurs, ni dépendance technique avec Edukora.
 ## Fonctionnalités
 
 - **Espace parent** : portail dédié — dashboard « Bonjour », enfants liés, détail enfant protégé par RLS, liaison par code en 2 étapes.
-- **Espace enseignant** : prise d'appel par classe, saisie des notes.
+- **Espace enseignant** : prise d'appel par classe (date, 4 statuts, retard → heure d'arrivée, note, appel partiel), historique des appels, tableau de bord « Mes classes » avec statut appel, saisie des notes.
+- **Espace parent** : dashboard « Aujourd'hui » **en direct** (Realtime), suivi d'assiduité (taux + journal + filtres), notifications d'absence/retard.
 - **Espace admin école** : gestion élèves (statuts), enseignants (activation), classes (année scolaire), matières (codes uniques), années scolaires (1 seule courante), répertoire parents, paramètres de l'établissement, annonces, approbation des liaisons parent-enfant, import CSV, analytique.
 - **Espace super-admin** : vue plateforme, création d'établissements.
 - **Liaison parent-enfant par code sécurisée** : codes hachés (SHA-256 salé, jamais en clair), expiration 7 j, usage unique, révocation, rate limiting, demande → approbation/rejet par l'école.
-- **Sécurité multi-tenant** : Row Level Security (PostgreSQL), isolation stricte des données par école et par rôle.
+- **Sécurité multi-tenant** : Row Level Security (PostgreSQL), isolation stricte des données par école et par rôle, trigger d'intégrité inter-écoles sur la présence.
+- **Temps réel** : présence et notifications livrées en direct via Supabase Realtime (Postgres Changes), RLS-scopé par abonné — sans polling.
 
 ## Stack
 
@@ -133,6 +135,13 @@ npx playwright install --with-deps
 npm run test:e2e
 ```
 
+Vérification RLS sur le backend réel (autorisations multi-tenant) :
+
+```bash
+npx tsx scripts/parent-linking-security-check.ts
+npx tsx scripts/attendance-security-check.ts
+```
+
 ## Lint & build
 
 ```bash
@@ -154,6 +163,9 @@ build à chaque push/PR.
 - [Sécurité](docs/SECURITY.md)
 - [Authentification & autorisation](docs/AUTH.md)
 - [Liaison parent-élève par code](docs/PARENT_LINKING.md)
+- [Prise de présence](docs/ATTENDANCE.md)
+- [Realtime](docs/REALTIME.md)
+- [Notifications](docs/NOTIFICATIONS.md)
 - [Déploiement](docs/DEPLOYMENT.md)
 - [Produit & MVP](docs/PRODUCT.md)
 

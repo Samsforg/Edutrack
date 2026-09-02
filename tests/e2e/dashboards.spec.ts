@@ -22,7 +22,7 @@ test.describe("Dashboards", () => {
     await firstClass.click();
     await expect(page.getByRole("heading", { name: "Appel du jour" })).toBeVisible();
     await expect(
-      page.getByRole("button", { name: /Valider l'appel|Appel déjà validé/ })
+      page.getByRole("button", { name: /Enregistrer l'appel|Mettre à jour l'appel/ })
     ).toBeVisible();
   });
 

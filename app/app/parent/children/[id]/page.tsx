@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
+import { getStudentAttendanceSummary } from "@/lib/db/attendance-history";
 
 const statusLabels: Record<string, string> = {
   active: "Actif",
@@ -26,6 +27,13 @@ export default async function ParentChildDetailPage({
 
   // RLS + notFound: a parent who is not linked to the student gets null.
   if (!child) return notFound();
+
+  const to = new Date().toISOString().slice(0, 10);
+  const from90 = new Date();
+  from90.setDate(from90.getDate() - 89);
+  const from = from90.toISOString().slice(0, 10);
+  const summary = await getStudentAttendanceSummary(id, from, to);
+  const rangeLabel = "90 derniers jours";
 
   return (
     <div className="space-y-6">
@@ -110,12 +118,26 @@ export default async function ParentChildDetailPage({
 
       <Card>
         <CardHeader>
-          <CardTitle>Suivi</CardTitle>
+          <CardTitle>Assiduité ({rangeLabel})</CardTitle>
         </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground">
-            Les informations de suivi apparaîtront ici…
-          </p>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+            <Stat label="Taux de présence" value={summary.rate == null ? "—" : `${summary.rate}%`} />
+            <Stat label="Jours relevés" value={String(summary.total)} />
+            <Stat label="Présent" value={String(summary.present)} />
+            <Stat label="Retard" value={String(summary.late)} />
+            <Stat label="Absent" value={String(summary.absent)} />
+          </div>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-sm text-muted-foreground">
+              Basé sur les {summary.total} jour(s) de présence enregistré(s).
+            </p>
+            <Button asChild variant="outline" size="sm">
+              <Link href={`/app/parent/children/${id}/attendance`}>
+                Historique complet →
+              </Link>
+            </Button>
+          </div>
         </CardContent>
       </Card>
 
@@ -124,6 +146,15 @@ export default async function ParentChildDetailPage({
           <Link href="/app/parent/children">← Retour</Link>
         </Button>
       </div>
+    </div>
+  );
+}
+
+function Stat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-lg border p-3 text-center">
+      <p className="text-xl font-bold">{value}</p>
+      <p className="text-xs text-muted-foreground">{label}</p>
     </div>
   );
 }

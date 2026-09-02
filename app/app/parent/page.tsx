@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { AttendanceLive } from "@/components/live/attendance-live";
 
 const statusLabels: Record<string, string> = {
   active: "Actif",
@@ -92,6 +93,21 @@ export default async function ParentDashboardPage() {
           </div>
         </div>
       )}
+
+      {hasAny ? (
+        <div className="space-y-4">
+          <h2 className="text-lg font-semibold">Présence aujourd&apos;hui</h2>
+          <div className="grid gap-4 md:grid-cols-2">
+            {children.map((child) => (
+              <AttendanceLive
+                key={child.student_id}
+                studentId={child.student_id}
+                studentName={`${child.student_first_name} ${child.student_last_name}`}
+              />
+            ))}
+          </div>
+        </div>
+      ) : null}
 
       {hasAny ? (
         <Card>
