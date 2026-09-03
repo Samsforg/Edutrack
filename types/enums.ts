@@ -20,14 +20,28 @@ export type NotificationType =
   | "attendance"
   | "grade"
   | "announcement"
-  | "system";
+  | "system"
+  | "risk_detected"
+  | "performance_drop"
+  | "attendance_drop"
+  | "positive_progress"
+  | "weekly_summary"
+  | "insight";
 
 export const NOTIFICATION_TYPES: readonly NotificationType[] = [
   "attendance",
   "grade",
   "announcement",
   "system",
+  "risk_detected",
+  "performance_drop",
+  "attendance_drop",
+  "positive_progress",
+  "weekly_summary",
+  "insight",
 ];
+
+export type NotificationPriority = "critical" | "high" | "normal" | "low";
 
 export type LinkRequestStatus = "pending" | "approved" | "rejected" | "expired";
 

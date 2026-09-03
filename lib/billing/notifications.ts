@@ -27,7 +27,7 @@ async function ensureNotNotifyAlready(
 
 export async function notifyBillingUsers(
   userIds: string[],
-  input: { type: string; title: string; body?: string; link?: string }
+  input: { type: string; title: string; body?: string; link?: string; priority?: string }
 ): Promise<void> {
   if (userIds.length === 0) return;
   const supabase = createAdminClient();
@@ -41,6 +41,7 @@ export async function notifyBillingUsers(
       title: input.title,
       body: input.body ?? null,
       link: input.link ?? null,
+      priority: input.priority ?? "normal",
     });
   }
   if (rows.length === 0) return;

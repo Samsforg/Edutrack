@@ -16,7 +16,14 @@ export type NotificationType =
   | "attendance"
   | "grade"
   | "announcement"
-  | "system";
+  | "system"
+  | "risk_detected"
+  | "performance_drop"
+  | "attendance_drop"
+  | "positive_progress"
+  | "weekly_summary"
+  | "insight";
+export type NotificationPriority = "critical" | "high" | "normal" | "low";
 export type LinkRequestStatus = "pending" | "approved" | "rejected" | "expired";
 export type AnnouncementAudience = "all" | "class";
 export type SubscriptionStatus =

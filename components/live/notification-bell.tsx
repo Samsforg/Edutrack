@@ -31,6 +31,12 @@ const TYPE_ICONS: Record<NotificationType, string> = {
   grade: "★",
   announcement: "A",
   system: "●",
+  risk_detected: "!",
+  performance_drop: "↓",
+  attendance_drop: "↓",
+  positive_progress: "▲",
+  weekly_summary: "Σ",
+  insight: "✦",
 };
 
 /**
