@@ -12,7 +12,7 @@ import {
   severityFromScore,
 } from "@/lib/ai/risk/engine";
 import { ATTENDANCE_THRESHOLDS } from "@/lib/ai/risk/config";
-import type { StudentRiskInput, RiskResult, RiskFactors } from "@/lib/ai/types";
+import type { StudentRiskInput, RiskResult } from "@/lib/ai/types";
 
 function makeInput(over: Partial<StudentRiskInput> = {}): StudentRiskInput {
   return {
