@@ -33,6 +33,9 @@ const adminNav = [
   { href: "/app/admin/subjects", label: "Matières" },
   { href: "/app/admin/academic-years", label: "Années scolaires" },
   { href: "/app/admin/parents", label: "Parents" },
+  { href: "/app/admin/insights", label: "Intelligence" },
+  { href: "/app/admin/assistant", label: "Assistant" },
+  { href: "/app/admin/ai", label: "IA & quotas" },
   { href: "/app/admin/announcements", label: "Annonces" },
   { href: "/app/admin/link-requests", label: "Codes & demandes" },
   { href: "/app/admin/settings", label: "Paramètres" },
@@ -53,6 +56,7 @@ const teacherNav = [
   { href: "/app/teacher/attendance", label: "Assiduité" },
   { href: "/app/teacher/attendance/history", label: "Historique" },
   { href: "/app/teacher/grades", label: "Évaluations & notes" },
+  { href: "/app/teacher/insights", label: "Alertes" },
 ];
 
 export function AppShell({ user, memberships, homePath, children }: AppShellProps) {

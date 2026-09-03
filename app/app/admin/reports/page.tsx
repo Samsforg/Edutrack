@@ -6,6 +6,8 @@ import {
   getClassAverages,
   getSchoolKpis,
 } from "@/lib/db/analytics";
+import { listInsights } from "@/lib/ai/store";
+import { INSIGHT_TYPE_LABELS, SEVERITY_LABELS, SEVERITY_BADGE } from "@/lib/ai/ui";
 import {
   Card,
   CardContent,
@@ -15,6 +17,7 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ExportButtons } from "./export-buttons";
+import type { AiInsight } from "@/lib/ai/types";
 
 export default async function ReportsPage({
   searchParams,
@@ -26,12 +29,13 @@ export default async function ReportsPage({
     session.memberships.find((m) => m.role === "SCHOOL_ADMIN")?.school_id ?? "";
   const { class: classFilter, from, to } = await searchParams;
 
-  const [kpis, trend, classRates, subjects, classAverages] = await Promise.all([
+  const [kpis, trend, classRates, subjects, classAverages, insights] = await Promise.all([
     getSchoolKpis(schoolId),
     getAttendanceTrend(schoolId, 30),
     getClassAttendanceRates(schoolId, 30),
     getSubjectAverages(schoolId),
     getClassAverages(schoolId),
+    listInsights({ schoolId, limit: 10 }),
   ]);
 
   const maxDaily = Math.max(1, ...trend.map((t) => t.absent + t.late + t.excused + t.present));
@@ -177,6 +181,33 @@ export default async function ReportsPage({
                     style={{ width: `${c.rate}%` }}
                   />
                 </div>
+              </div>
+            ))
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Intelligence report */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <CardTitle>Intelligence — signaux récents</CardTitle>
+            <CardDescription>Derniers insights générés par le moteur de risque.</CardDescription>
+          </div>
+          <a href="/app/admin/insights" className="text-sm text-primary hover:underline">
+            Voir tous →
+          </a>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          {insights.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Aucun signal détecté pour le moment.</p>
+          ) : (
+            insights.slice(0, 5).map((i: AiInsight) => (
+              <div key={i.id} className="flex flex-wrap items-center gap-2 border-b pb-2 last:border-0">
+                <Badge className={SEVERITY_BADGE[i.severity]}>{SEVERITY_LABELS[i.severity]}</Badge>
+                <Badge variant="outline">{INSIGHT_TYPE_LABELS[i.type]}</Badge>
+                <span className="font-medium">{i.title}</span>
+                <span className="text-xs text-muted-foreground ml-auto">Confiance : {i.confidence}%</span>
               </div>
             ))
           )}

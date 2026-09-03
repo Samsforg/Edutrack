@@ -8,10 +8,13 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { CommunicationPrefs } from "./communication-prefs";
 
 export default async function AccountPage() {
   const session = await getSession();
   if (!session?.user) redirect("/login");
+
+  const primarySchool = session.memberships[0]?.school_id ?? null;
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
@@ -59,6 +62,8 @@ export default async function AccountPage() {
           )}
         </CardContent>
       </Card>
+
+      <CommunicationPrefs schoolId={primarySchool} />
     </div>
   );
 }

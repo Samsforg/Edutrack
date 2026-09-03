@@ -64,6 +64,9 @@ export default async function ParentChildDetailPage({
         <Button asChild variant="outline" size="sm">
           <Link href={`/app/parent/children/${id}/grades`}>Notes</Link>
         </Button>
+        <Button asChild variant="outline" size="sm">
+          <Link href={`/app/parent/children/${id}/insights`}>Signaux</Link>
+        </Button>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
